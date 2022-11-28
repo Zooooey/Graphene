@@ -34,10 +34,11 @@ int circle::en_circle(int id)
 
 	if(num_elem != size)
 	{
-		__sync_fetch_and_add(&num_elem, 1);	
+		//__sync_fetch_and_add(&num_elem, 1);	
 		ret = 0;
 		array[tail] = id;
 		tail = (tail + 1) % size;
+		__sync_fetch_and_add(&num_elem, 1);	
 	}
 	unlock(lock_tail);
 	return ret;
