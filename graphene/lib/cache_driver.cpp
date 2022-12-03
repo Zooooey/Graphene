@@ -231,7 +231,7 @@ void cache_driver::load_chunk()
 			//else
 			//{
 			cache[i]->status=EVICTED;
-			circ_free_chunk->en_circle(i);
+			circ_free_chunk->en_circle_v(i);
 			//}
 		}
 	}
@@ -264,7 +264,7 @@ void cache_driver::load_chunk()
 				break;
 			}
 			
-			index_t chunk_id = circ_free_chunk->de_circle();
+			index_t chunk_id = circ_free_chunk->de_circle_v();
 			req->chunk_id[req->num_ios++] = chunk_id;
 
 			//clean this bit
