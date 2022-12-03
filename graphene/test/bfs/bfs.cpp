@@ -225,13 +225,14 @@ int main(int argc, char **argv)
 					while((chunk_id = it->cd->circ_load_chunk->de_circle())
 							== -1)
 					{
-						/*if(debuging%100000 == 0)	{
+						if(debuging%100000 == 0)	{
+							cout<<" tid:"<<omp_get_thread_num()<<endl;
 							cout<<"while((chunk_id = it->cd->circ_load_chunk->de_circle()): chunk_id:"<<chunk_id<<endl;
 							cout<<"circ_load_chunk:"<<it->cd->circ_load_chunk->num_elem<<" size:"<<it->cd->circ_load_chunk->size<<endl;
 							cout<<"circ_free_chunk:"<<it->cd->circ_free_chunk->num_elem<<" size:"<<it->cd->circ_free_chunk->size<<endl;
 							cout<<"circ_load_chunk:"<<it->cd->circ_free_ctx->num_elem<<" size:"<<it->cd->circ_free_ctx->size<<endl;
 							cout<<"reqt_blk_count:"<<it->reqt_blk_count<<endl;
-						}*/
+						}
 						if(it->is_bsp_done)
 						{
 							chunk_id = it->cd->circ_load_chunk->de_circle();
