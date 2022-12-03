@@ -1,6 +1,7 @@
 #include "IO_smart_iterator.h"
 #include <unistd.h>
-#include <asm/mman.h>
+//#include <asm/mman.h>
+#include <linux/mman.h>
 #include <omp.h>
 //PageRank requires buff_source and buff_dest 
 //have same type as vertex_t. 
@@ -302,7 +303,7 @@ IO_smart_iterator::IO_smart_iterator(
 	total_blks = beg_pos_ptr[row_ranger_end-row_ranger_beg]/VERT_PER_BLK;
 	
 	//if(total_blks & (VERT_PER_BLK-1)) ++total_blks;
-	if(beg_pos_ptr[row_ranger_end-row_ranger_beg] & (VERT_PER_BLK-1)) ++total_blks
+	if(beg_pos_ptr[row_ranger_end-row_ranger_beg] & (VERT_PER_BLK-1)) ++total_blks;
 
 	//add 64 more bits, in order for quick bitmap scan.
 	reqt_blk_bitmap=(bit_t *)mmap(NULL,((total_blks>>3)+8) * sizeof(bit_t),

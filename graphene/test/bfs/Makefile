@@ -5,7 +5,7 @@ cucc= "$(shell which nvcc)"
 
 
 #cuflags= -gencode=arch=compute_20,code=\"sm_20,compute_20\"  -Xptxas -v -Xcudafe -\# -Xptxas -abi=no -m64 -I"/usr/local/cuda/bin/../include" -I. -I../../../ -I../../../b40c -O3 -D_FORCE_INLINES
-flags = -I../../lib/ -I. -laio -fopenmp 
+flags = -I../../lib/ -I. -laio -fopenmp -std=c++0x -g
 
 flags+=-DKEYS_SORTING_ONLY -DBLK_SZ=512
 ifeq ($(time), 1)

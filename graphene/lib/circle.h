@@ -3,6 +3,7 @@
 
 #include "util.h"
 #include "comm.h"
+#include <atomic>
 
 class circle
 {
@@ -14,7 +15,8 @@ class circle
 		volatile int lock_head;
 		volatile int lock_tail;
 
-		volatile int num_elem;
+		volatile std::atomic<int> num_elem;
+
 
 	public: 
 		circle(){};
@@ -23,7 +25,9 @@ class circle
 
 	public:
 		int en_circle(int id);
+		int en_circle_v(int id);
 		int de_circle();
+		int de_circle_v();
 		int get_sz();
 		bool is_full();
 		bool is_empty();

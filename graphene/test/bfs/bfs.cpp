@@ -5,10 +5,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <asm/mman.h>
+//#include <asm/mman.h>
+#include <linux/mman.h>
 #include "pin_thread.h"
 #include "get_vert_count.hpp"
 #include "get_col_ranger.hpp"
+using namespace std;
 
 inline bool is_active
 (index_t vert_id,
@@ -198,6 +200,7 @@ int main(int argc, char **argv)
 			convert_tm=wtime();
 			if((tid & 1) == 0)
 			{
+				cout<<"again!"<<endl;
 				it->is_bsp_done = false;
 				if((prev_front_count * 100.0)/ vert_count > 2.0) 
 					it->req_translator(level);
@@ -208,6 +211,8 @@ int main(int argc, char **argv)
 			}
 			else it->is_io_done = false;
 #pragma omp barrier
+			cout<<"at beginning free_chunk_num:"<<it->cd->circ_free_chunk->get_sz()<<" size:"<<it->cd->circ_free_chunk->size<<" tid:"<<omp_get_thread_num()<<endl;
+			cout<<"at beginning load_chunk_num:"<<it->cd->circ_load_chunk->get_sz()<<" size:"<<it->cd->circ_load_chunk->size<<" tid:"<<omp_get_thread_num()<<endl;
 			convert_tm=wtime()-convert_tm;
 
 			if((tid & 1) == 0)
@@ -216,9 +221,17 @@ int main(int argc, char **argv)
 				{	
 					int chunk_id = -1;
 					double blk_tm = wtime();
+					uint64_t debuging = 0;
 					while((chunk_id = it->cd->circ_load_chunk->de_circle())
 							== -1)
 					{
+						/*if(debuging%100000 == 0)	{
+							cout<<"while((chunk_id = it->cd->circ_load_chunk->de_circle()): chunk_id:"<<chunk_id<<endl;
+							cout<<"circ_load_chunk:"<<it->cd->circ_load_chunk->num_elem<<" size:"<<it->cd->circ_load_chunk->size<<endl;
+							cout<<"circ_free_chunk:"<<it->cd->circ_free_chunk->num_elem<<" size:"<<it->cd->circ_free_chunk->size<<endl;
+							cout<<"circ_load_chunk:"<<it->cd->circ_free_ctx->num_elem<<" size:"<<it->cd->circ_free_ctx->size<<endl;
+							cout<<"reqt_blk_count:"<<it->reqt_blk_count<<endl;
+						}*/
 						if(it->is_bsp_done)
 						{
 							chunk_id = it->cd->circ_load_chunk->de_circle();
@@ -226,23 +239,25 @@ int main(int argc, char **argv)
 						}
 					}
 					it->wait_io_time += (wtime() - blk_tm);
+					cout<<"load_chunk_num:"<<it->cd->circ_load_chunk->get_sz()<<" size:"<<it->cd->circ_load_chunk->size<<" tid:"<<omp_get_thread_num()<<endl;
 
 					if(chunk_id == -1) break;
 					struct chunk *pinst = it->cd->cache[chunk_id];	
 					index_t blk_beg_off = pinst->blk_beg_off;
 					index_t num_verts = pinst->load_sz;
 					vertex_t vert_id = pinst->beg_vert;
-
+					//cout<<"level:"<<(unsigned int)level<<" vert_id:"<<vert_id<<endl;
 					//process one chunk
 					while(true)
 					{
-						if(sa[vert_id] == level)
+						if(sa[vert_id] == (unsigned int)level)
 						{
 							index_t beg = beg_pos[vert_id - it->row_ranger_beg] 
 								- blk_beg_off;
 							index_t end = beg + beg_pos[vert_id + 1 - 
 								it->row_ranger_beg]- 
 								beg_pos[vert_id - it->row_ranger_beg];
+							//cout<<"	neighbor beg:"<<beg<<" neighbor end:"<<end<<endl;
 
 							//possibly vert_id starts from preceding data block.
 							//there by beg<0 is possible
@@ -254,7 +269,7 @@ int main(int argc, char **argv)
 								vertex_t nebr = pinst->buff[beg];
 								if(sa[nebr] == INFTY)
 								{
-									sa[nebr]=level+1;
+									sa[nebr]=(unsigned int)level+1;
 									if(front_count <= it->col_ranger_end - it->col_ranger_beg)
 										it->front_queue[comp_tid][front_count] = nebr;
 									front_count++;
@@ -262,15 +277,25 @@ int main(int argc, char **argv)
 							}
 						}
 						++vert_id;
-
-						if(vert_id >= it->row_ranger_end) break;
+						//cout<<"++vert_id:"<<vert_id<<endl;
+						if(vert_id >= it->row_ranger_end){
+							 //cout<<"vert_id >= it->row_ranger_end! vert_id:"<<vert_id<<" row_ranger_end:"<<it->row_ranger_end<<endl;
+							 break;
+						} else {
+							
+						}
 						if(beg_pos[vert_id - it->row_ranger_beg]
-								- blk_beg_off > num_verts) 
+								- blk_beg_off > num_verts) {
+							 //cout<<"break! vert_id:"<<vert_id<<" row_ranger_beg:"<<it->row_ranger_beg<<" blk_beg_off:"<<blk_beg_off<<" num_verts:"<<num_verts<<endl;
 							break;
+						}
+						else {
+						}
 					}
 
 					pinst->status = EVICTED;
-					assert(it->cd->circ_free_chunk->en_circle(chunk_id)!= -1);
+					cout<<"free_chunk_num:"<<it->cd->circ_free_chunk->get_sz()<<" size:"<<it->cd->circ_free_chunk->size<<" tid:"<<omp_get_thread_num()<<endl;
+					assert(it->cd->circ_free_chunk->en_circle_v(chunk_id)!= -1);
 				}
 
 				//work-steal
@@ -368,7 +393,7 @@ int main(int argc, char **argv)
 					//	}
 					//	it->circ_free_buff->en_circle(curr_buff);
 					//}
-
+					//cout<<"load_key"<<endl;
 					it->load_key(level);
 					//it->load_key_iolist(level);
 				}
@@ -379,6 +404,7 @@ finish_point:
 			front_count = 0;
 			for(int i = 0 ;i< NUM_THDS; ++i)
 				front_count += comm[i];
+			cout<<"sum up front_count:"<<front_count<<endl;
 
 			ltm = wtime() - ltm;
 			if(!tid) tm += ltm;
@@ -396,7 +422,7 @@ finish_point:
 				<<front_count<<" "<<ltm<<" "<<convert_tm<<" "<<it->io_time
 				<<"("<<it->cd->io_submit_time<<","<<it->cd->io_poll_time<<") "
 				<<" "<<it->wait_io_time<<" "<<it->wait_comp_time<<" "
-				<<total_sz<<"\n";
+				<<total_sz<<"\n"<<endl;
 			
 			if(front_count == 0 || level > 254) break;
 			prev_front_count = front_count;

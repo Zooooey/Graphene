@@ -1,6 +1,7 @@
 #include "cache_driver.h"
 #include <sys/mman.h>
-#include <asm/mman.h>
+//#include <asm/mman.h>
+#include <linux/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/uio.h>
