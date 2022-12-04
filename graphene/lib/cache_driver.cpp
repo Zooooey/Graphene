@@ -235,7 +235,7 @@ void cache_driver::load_chunk()
 			//else
 			//{
 			cache[i]->status=EVICTED;
-			circ_free_chunk->en_circle_v(i);
+			circ_free_chunk->en_circle(i);
 			//}
 		}
 	}
@@ -286,7 +286,7 @@ void cache_driver::load_chunk()
 			}
 			
 			//从环形缓冲区获取一个free_chunk
-			index_t chunk_id = circ_free_chunk->de_circle_v();
+			index_t chunk_id = circ_free_chunk->de_circle();
 			//在req对象的里标记这个chunk的id
 			req->chunk_id[req->num_ios++] = chunk_id;
 

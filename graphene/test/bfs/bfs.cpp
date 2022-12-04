@@ -298,7 +298,7 @@ int main(int argc, char **argv)
 
 					pinst->status = EVICTED;
 					cout<<"free_chunk_num:"<<it->cd->circ_free_chunk->get_sz()<<" size:"<<it->cd->circ_free_chunk->size<<" tid:"<<omp_get_thread_num()<<endl;
-					assert(it->cd->circ_free_chunk->en_circle_v(chunk_id)!= -1);
+					assert(it->cd->circ_free_chunk->en_circle(chunk_id)!= -1);
 				}
 
 				//work-steal
