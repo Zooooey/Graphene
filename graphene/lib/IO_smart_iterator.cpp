@@ -696,13 +696,11 @@ void IO_smart_iterator::load_key(sa_t criterion)
 //	
 //	io_this_tm = wtime();
 //	vertex_t *io_buff = buff_dest[buff_ptr_io];
+	
+	cd->get_chunk();
 	double blk_tm = wtime();
 	while(cd->circ_free_chunk->is_empty()){}
 	this->wait_comp_time += (wtime() - blk_tm);
-
-	cd->get_chunk();
-	cd->load_chunk();
-	cd->get_chunk();
 	cd->load_chunk();
 	if((cd->circ_load_chunk->is_empty()) &&
 		(cd->circ_free_chunk->is_full()) &&

@@ -230,7 +230,7 @@ int main(int argc, char **argv)
 							cout<<"while((chunk_id = it->cd->circ_load_chunk->de_circle()): chunk_id:"<<chunk_id<<endl;
 							cout<<"circ_load_chunk:"<<it->cd->circ_load_chunk->num_elem<<" size:"<<it->cd->circ_load_chunk->size<<endl;
 							cout<<"circ_free_chunk:"<<it->cd->circ_free_chunk->num_elem<<" size:"<<it->cd->circ_free_chunk->size<<endl;
-							cout<<"circ_load_chunk:"<<it->cd->circ_free_ctx->num_elem<<" size:"<<it->cd->circ_free_ctx->size<<endl;
+							cout<<"circ_free_ctx:"<<it->cd->circ_free_ctx->num_elem<<" size:"<<it->cd->circ_free_ctx->size<<endl;
 							cout<<"reqt_blk_count:"<<it->reqt_blk_count<<endl;
 						}
 						if(it->is_bsp_done)
