@@ -285,7 +285,6 @@ void cache_driver::load_chunk()
 				break;
 			}
 			
-			std::cout<<"load_chunk are doing de_circle!"<<std::endl;
 			//从环形缓冲区获取一个free_chunk
 			index_t chunk_id = circ_free_chunk->de_circle_v();
 			//在req对象的里标记这个chunk的id
@@ -293,6 +292,7 @@ void cache_driver::load_chunk()
 
 			
 			--(*reqt_blk_count);//TODO: 这里为什么要--?reqt_blk_count代表着什么？我猜应该是指还有多少blk需要读取，--就是目前读了一个？
+			cout<<"reqt_blk_count:"<<*reqt_blk_count<<endl;
 			//clean this bit
 			/*
 				这里按位取反其实是取消置位，例如0000 0001取反是1111 1110，然后与操作会把最低置0
