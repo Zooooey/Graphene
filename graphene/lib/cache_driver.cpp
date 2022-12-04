@@ -292,7 +292,10 @@ void cache_driver::load_chunk()
 
 			
 			--(*reqt_blk_count);//TODO: 这里为什么要--?reqt_blk_count代表着什么？我猜应该是指还有多少blk需要读取，--就是目前读了一个？
-			cout<<"reqt_blk_count:"<<*reqt_blk_count<<endl;
+			if (*reqt_blk_count % 10000 == 0)
+			{
+				cout << "reqt_blk_count:" << *reqt_blk_count << endl;
+			}
 			//clean this bit
 			/*
 				这里按位取反其实是取消置位，例如0000 0001取反是1111 1110，然后与操作会把最低置0
