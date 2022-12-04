@@ -407,7 +407,7 @@ finish_point:
 			front_count = 0;
 			for(int i = 0 ;i< NUM_THDS; ++i)
 				front_count += comm[i];
-			cout<<"sum up front_count:"<<front_count<<endl;
+			if (!tid)cout<<"sum up front_count:"<<front_count<<endl;
 
 			ltm = wtime() - ltm;
 			if(!tid) tm += ltm;
