@@ -697,7 +697,14 @@ void IO_smart_iterator::load_key(sa_t criterion)
 //	io_this_tm = wtime();
 //	vertex_t *io_buff = buff_dest[buff_ptr_io];
 	double blk_tm = wtime();
-	while(cd->circ_free_chunk->is_empty()){}
+	uint64_t debuging = 0;
+	while(cd->circ_free_chunk->is_empty()){
+		debuging++;
+		if(debuging % 1000000000 ==0){
+			std::cout<<"debuging:"<<debuging<<std::endl;
+			std::cout<<"tid:"<< omp_get_thread_num()<<" looping here!"<<std::endl;
+		}
+	}
 	this->wait_comp_time += (wtime() - blk_tm);
 
 	cd->get_chunk();

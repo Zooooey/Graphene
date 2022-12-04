@@ -225,7 +225,9 @@ int main(int argc, char **argv)
 					while((chunk_id = it->cd->circ_load_chunk->de_circle())
 							== -1)
 					{
-						if(debuging%100000 == 0)	{
+						debuging++;
+						if(debuging%100000000 == 0)	{
+							cout<<"	debuging:"<<debuging<<endl;
 							cout<<" tid:"<<omp_get_thread_num()<<endl;
 							cout<<"while((chunk_id = it->cd->circ_load_chunk->de_circle()): chunk_id:"<<chunk_id<<endl;
 							cout<<"circ_load_chunk:"<<it->cd->circ_load_chunk->num_elem<<" size:"<<it->cd->circ_load_chunk->size<<endl;

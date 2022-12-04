@@ -264,7 +264,7 @@ void cache_driver::load_chunk()
 				break;
 			}
 			
-			cout<<"load_chunk are doing de_circle!"<<endl;
+			std::cout<<"load_chunk are doing de_circle!"<<std::endl;
 			index_t chunk_id = circ_free_chunk->de_circle_v();
 			req->chunk_id[req->num_ios++] = chunk_id;
 
