@@ -281,7 +281,7 @@ void cache_driver::load_chunk()
 			//-record this chunk is submmited
 			if(circ_free_chunk->get_sz() == 0)
 			{
-				std::cout<<"[cache_driver::load_chunk]:Running out of free chunk! Aborting load_chunk()\n";
+				//std::cout<<"[cache_driver::load_chunk]:Running out of free chunk! Aborting load_chunk()\n";
 				break;
 			}
 			
