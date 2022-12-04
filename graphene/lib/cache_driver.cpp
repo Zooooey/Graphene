@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <sys/uio.h>
 #include <stdint.h>
+using namespace std;
 //bitmap + req_list together
 cache_driver::cache_driver(
 			int fd_csr,
@@ -190,6 +191,7 @@ void cache_driver::submit_io_req(index_t io_id)
 
 
 //for Bitmap based IO loading
+//从free_chunk取出chunk并发动io载入数据
 void cache_driver::load_chunk()
 {
 	//Let cache driver do some work.
@@ -197,8 +199,10 @@ void cache_driver::load_chunk()
 	//TODO!!! THIS IS A BIG ISSUE!
 	//load_blk_off should be inited by someone else.
 	double  this_time = wtime();
+	//io_conserve貌似是一种重置，类须于下一个level需要把io给重制了？
 	if(*io_conserve)
 	{
+		cout<<"[cache_driver::load_chunk]: Doing io_converv! free_chunk&load_chunk would be reset!"<<endl;
 		//printf("*reqt_blk_count: %ld\n", *reqt_blk_count);
 		//- load_blk_off: next load will load from this block 
 		load_blk_off = 0;
@@ -236,16 +240,20 @@ void cache_driver::load_chunk()
 		}
 	}
 	
-	if(circ_free_ctx->get_sz()==0)
+	if(circ_free_ctx->get_sz()==0){
+		cout<<"[cache_driver::load_chunk]:No free ctx, aborting load_chunk()"<<endl;
 		return;
+	}
 	
+	//得到一个free_ctx
 	index_t io_id = circ_free_ctx->de_circle();
+	//从io_list里获得io_req对象
 	struct io_req *req = io_list[io_id];
 	req->num_ios = 0;
 	
 	if(load_blk_off >= total_blks && (*reqt_blk_count != 0))
 	{
-		//std::cout<<"Exhaust all blocks not finish all requests\n";
+		std::cout<<"Exhaust all blocks not finish all requests\n";
 		//assert(*reqt_blk_count == 0);
 		*reqt_blk_count = 0;
 
@@ -254,25 +262,46 @@ void cache_driver::load_chunk()
 	while((load_blk_off<total_blks) && (*reqt_blk_count != 0))
 	{
 		//find a to-be-load block
-		if(reqt_blk_bitmap[load_blk_off>>3] & (1<<(load_blk_off&7)))
+		/*这个位操作貌似是用来确定这个block要不要读取的.
+			右移三位表示load_blk_off的最低3位有别的用途，只需要高3位以后的数值作为index
+			load_blk_off= 0000 0001 1101 1101(b)
+						  | bit_map index|value|
+			load_blk_off >>3 = index = 0000 0001 1101 1xxx(b)
+			load_blk_off&7 = xxxx xxxx xxxx x101(b)
+			说明load_blk_off的低3位范围是十进制的[0,7]
+			1<<(load_blk_off&7) 是 0000 0000 8个位里置1，因此有8种可能。
+
+			load_blk_off
+		*/
+
+		
+		if(reqt_blk_bitmap[load_blk_off>>3] & (1<<(load_blk_off&7)))//8个位里对应的那一位是1
 		{
 			//Get one free chunk
 			//-record this chunk is submmited
 			if(circ_free_chunk->get_sz() == 0)
 			{
-				//std::cout<<"Running out of chunk$$$$$$$$\n";
+				std::cout<<"[cache_driver::load_chunk]:Running out of free chunk! Aborting load_chunk()\n";
 				break;
 			}
 			
 			std::cout<<"load_chunk are doing de_circle!"<<std::endl;
+			//从环形缓冲区获取一个free_chunk
 			index_t chunk_id = circ_free_chunk->de_circle_v();
+			//在req对象的里标记这个chunk的id
 			req->chunk_id[req->num_ios++] = chunk_id;
 
+			
+			--(*reqt_blk_count);//TODO: 这里为什么要--?reqt_blk_count代表着什么？我猜应该是指还有多少blk需要读取，--就是目前读了一个？
 			//clean this bit
-			--(*reqt_blk_count);
+			/*
+				这里按位取反其实是取消置位，例如0000 0001取反是1111 1110，然后与操作会把最低置0
+			*/
+			//取消置位的原因应该也是，reqt_blk_bitmap标记了哪些blk需要读取。
 			reqt_blk_bitmap[load_blk_off>>3] &= (~(1<<(load_blk_off&7)));
 			
 			//update chunk metadata
+			//更新metadata，并标记 位loading。
 			cache[chunk_id]->status = LOADING;
 			index_t beg_blk_id = load_blk_off;
 			cache[chunk_id]->beg_vert= blk_beg_vert[beg_blk_id];
@@ -286,10 +315,11 @@ void cache_driver::load_chunk()
 			}
 
 			//Unite blocks to form a big chunk
-			int continuous_useless_blk=0;
+			int continuous_useless_blk=0;//底下blk要读连续的blk，所以这个变量标记空洞的数量。
 			while(load_blk_off<total_blks)
 			{
 				++load_blk_off;
+				//应该是说超过一个chunk？因为load_chunk本质上是只处理一个chunk吧？
 				if(load_blk_off+1-beg_blk_id>blk_per_chunk) break;
 				
 				if(reqt_blk_bitmap[load_blk_off>>3] & (1<<(load_blk_off&7)))
@@ -298,6 +328,7 @@ void cache_driver::load_chunk()
 
 					--(*reqt_blk_count);
 					reqt_blk_bitmap[load_blk_off>>3] &= (~(1<<(load_blk_off&7)));
+					//这里更新下当前chunk的装载数据的大小，会把空洞也算进去，所以底下continous_useless_blk的作用就是记录这里有点多少废数据？
 					cache[chunk_id]->load_sz=(load_blk_off+1-beg_blk_id)*VERT_PER_BLK;
 					
 					//init load_blk_off for next level scanning
@@ -313,19 +344,22 @@ void cache_driver::load_chunk()
 				}
 			}
 			
+			//io数到头了
 			if(req->num_ios==MAX_EVENTS)
 			{
 				//avoid io_ctx miss tracking
-				circ_submitted_ctx->en_circle(io_id);
+				circ_submitted_ctx->en_circle(io_id);//ctx已提交的环形缓冲区
 				submit_io_req(io_id);
 
+
 				//start a new io_ctx;
+				//如果free_ctx好像是放出一个free_ctx给下一个loop用的。
 				if(circ_free_ctx->get_sz()==0)
 				{
 					io_submit_time += (wtime() - this_time);
 					return;
 				}
-
+				//这里放出来给下一个loop？
 				io_id = circ_free_ctx->de_circle();
 				req = io_list[io_id];
 				req->num_ios=0;
@@ -599,6 +633,7 @@ void cache_driver::load_chunk_full()
 
 
 //return a full circle of loaded chunks
+//从submitted_ctx里取出所有已有数据的chunk，放入load_chunk circle，然后释放ctx到free_ctx里。
 circle *cache_driver::get_chunk()
 {
 	//std::cout<<"here\n";
