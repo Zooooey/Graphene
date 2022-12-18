@@ -15,6 +15,7 @@ bin_struct_reader(const char* filename)
     }
 
     size_t fbytes=st.st_size;
+    //根据文件大小除以边大小(vertex是32位的无符号整型，edge包含起点和终点)
     num_edges=fbytes/sizeof(edge<vertex_t>);
     assert(num_edges*sizeof(edge<vertex_t>) == fbytes);
     
@@ -27,7 +28,11 @@ bin_struct_reader(const char* filename)
     edge_list = (edge<vertex_t> *)mmap(0, fbytes, PROT_READ, MAP_PRIVATE, fd, 0);
     assert(edge_list != MAP_FAILED);
 }
-    
+
+/**
+ * 通过mmap到内存里的edge_list，遍历所有edge，得到最大vertex编号和最小vertex编号
+ * 
+ * */
 template<typename vertex_t, typename index_t>
 void bin_struct_reader<vertex_t, index_t>::
 vert_ranger()

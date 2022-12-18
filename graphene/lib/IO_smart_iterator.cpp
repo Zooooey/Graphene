@@ -138,29 +138,6 @@ IO_smart_iterator::IO_smart_iterator(
 	is_bsp_done = false;
 	is_io_done = false;
 	
-//	circ_free_buff = new circle(num_buffs);
-//	circ_load_buff = new circle(num_buffs);
-//	circ_free_buff -> reset_circle();
-//	circ_load_buff -> reset_circle();
-//	for(int i = 0; i < num_buffs; i ++)
-//	{
-//		buff_source[i] = (sa_t *)mmap(NULL, 
-//				ring_vert_count*sizeof(sa_t),
-//				PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-//				| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
-//		buff_dest[i] = (vertex_t *)mmap(NULL, 
-//				ring_vert_count*sizeof(vertex_t),
-//				PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-//				| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
-//
-//		if(buff_source[i]==MAP_FAILED ||
-//				buff_dest[i] == MAP_FAILED)
-//			perror("buff_source buff_dest mmap");
-//		
-//		buff_edge_count[i] = 0;
-//		circ_free_buff->en_circle(i);
-//	}
-	
 	front_count = front_count_ptr;
 	front_queue = front_queue_ptr;
 	col_ranger = col_ranger_ptr;
@@ -239,6 +216,7 @@ IO_smart_iterator::IO_smart_iterator(
 		exit(-1);
 	}
 
+	//beg_file的大小
 	off_t sz_beg = fsize(beg_filename);
 	row_ranger_beg = 0;
 	for(int i=0;i<my_row;i++)
@@ -433,10 +411,6 @@ void IO_smart_iterator::front_sort_cpu()
 
 	qsort(this->front_queue[comp_tid], num_front, sizeof(vertex_t),
 			cmpfunc);
-
-//	if(comp_tid == 0) 
-	//printf("front_count: %ld: %u, %u\n", 
-	//		num_front, this->front_queue[comp_tid][0], this->front_queue[comp_tid][1]);
 }
 
 //-Translate frontiers to requested data blks
@@ -595,18 +569,19 @@ void IO_smart_iterator::req_convert_list()
 			   (fq_ranger_end >= row_ranger_beg && fq_ranger_end < row_ranger_end) ||
 			   (fq_ranger_end >= row_ranger_end && fq_ranger_beg <=row_ranger_beg))
 			{
+				//front_count记录对应块的frontier个数
 				for(index_t m = 0; m < front_count[row_ptr * num_cols + col_ptr]; m ++)
 				{
+					//front_queue记录每个块内的所有neighbors
 					index_t i = front_queue[row_ptr * num_cols + col_ptr][m];
+					//i∈[row_range_beg, row_ranger_end)，i是对应块的行号范围。
 					if((i < row_ranger_beg) || (i >= row_ranger_end)) continue;
-					
-					//if(i-row_ranger_beg<0) printf("%u-beg-%u\n",i,row_ranger_beg);
-					//if(i+1-row_ranger_beg >= row_ranger_end) 
-					//	printf("%u-end-%u\n", i, row_ranger_end);
-					
-					if(m>0)
+				
+					if(m>0){
+						//front_queue里前一个neighbor_id和当前neighbor_id相等，这是什么情况？
 						if(front_queue[row_ptr * num_cols + col_ptr][m-1]
 								== i) continue;
+					}
 
 					index_t beg = beg_pos_ptr[i - row_ranger_beg];
 					index_t end = beg_pos_ptr[i+1 - row_ranger_beg];
@@ -684,19 +659,7 @@ int IO_smart_iterator::next(int used_buff)
 //Pointer chasing based load key
 void IO_smart_iterator::load_key(sa_t criterion)
 {
-//	double io_this_tm;
-//	int buff_ptr_io = -1;
-//	while((buff_ptr_io = circ_free_buff->de_circle())
-//			== -1)
-//	{
-//		//printf("I%d\n", omp_get_thread_num());
-//		cd->get_chunk();
-//		cd->load_chunk();
-//	}
-//	
-//	io_this_tm = wtime();
-//	vertex_t *io_buff = buff_dest[buff_ptr_io];
-	
+
 	cd->get_chunk();
 	double blk_tm = wtime();
 	uint64_t debuging = 0;
@@ -717,83 +680,6 @@ void IO_smart_iterator::load_key(sa_t criterion)
 		//std::cout<<omp_get_thread_num()<<"-done\n";
 		is_bsp_done = true;
 	}
-
-	
-	
-	//	//Once entering here. 
-//	//-dump out at least half submissions
-//	//-if at half, still NULL, dump all
-//	index_t num_elements = 0;
-//	while(true)
-//	{
-//		circle *loadc=cd->get_chunk();
-//		index_t processed_chunk = 0;
-//		//a new loaded circle is empty
-//		//we are good to go.
-//		if(loadc->is_empty()) break;
-//
-//		while(!loadc->is_empty())
-//		{
-//			index_t chunk_id = loadc->de_circle();
-//			struct chunk *pinst = cd->cache[chunk_id];	
-//			index_t blk_beg_off = pinst->blk_beg_off;
-//			index_t num_verts = pinst->load_sz;
-//			vertex_t vert_id = pinst->beg_vert;
-//
-//			//process one chunk
-//			while(true)
-//			{
-//				if((*is_active)(vert_id,criterion,sa_ptr, sa_prev))
-//				{
-//					index_t beg = beg_pos_ptr[vert_id-row_ranger_beg]-blk_beg_off;
-//					index_t end = beg + beg_pos_ptr[vert_id+1-row_ranger_beg]- 
-//						beg_pos_ptr[vert_id-row_ranger_beg];
-//
-//					//possibly vert_id starts from preceding data block.
-//					//there by beg<0 is possible
-//					if(beg<0) beg = 0;
-//
-//					if(end>num_verts) end = num_verts;
-//					for( ;beg<end; ++beg)
-//					{
-//						//assert(pinst->buff[beg]<1262485504);
-//						io_buff[num_elements++] = pinst->buff[beg];
-//					}
-//				}
-//				++vert_id;
-//
-//				if(vert_id >= this->row_ranger_end) break;
-//				if(beg_pos_ptr[vert_id-row_ranger_beg]-blk_beg_off > num_verts) 
-//					break;
-//			}
-//
-//			pinst->status = EVICTED;
-//			cd->circ_free_chunk->en_circle(chunk_id);
-//			++processed_chunk;
-//
-//			//issue 16 requests each time
-//			if(processed_chunk==((cd->io_limit)>>1))
-//			{
-//				cd->load_chunk();
-//				cd->get_chunk();
-//				processed_chunk=0;
-//			}
-//			if(num_elements > buff_max_vert - cd->vert_per_chunk)
-//				goto fullpoint;
-//		}
-//	}
-//
-//fullpoint:
-//	cd->load_chunk();
-//	cd->get_chunk();
-//
-//	buff_edge_count[buff_ptr_io] = num_elements;
-//	//if(circ_load_buff->get_sz() > 2) 
-//	//	qsort(io_buff, num_elements, sizeof(vertex_t), cmpfunc);
-//	circ_load_buff->en_circle(buff_ptr_io);
-//	is_bsp_done = (num_elements == 0);
-//	io_time += (wtime() - io_this_tm);
-//	//if(comp_tid == 0) std::cout<<"num_elements: "<<num_elements<<"\n";
 	return;
 }
 
@@ -814,97 +700,6 @@ void IO_smart_iterator::load_kv_vert_full(sa_t criterion)
 		(cd->circ_free_ctx->is_full()) &&
 		(this->reqt_blk_count == 0))
 		is_bsp_done = true;
-
-
-//	int buff_ptr_io = -1;
-//	double io_this_tm;
-//	//while(is_io_done == true)
-//	double blk_tm = wtime();
-//	while((buff_ptr_io = circ_free_buff->de_circle())
-//			== -1)
-//	{
-//		cd->get_chunk();
-//		cd->load_chunk_full();
-//	}
-//
-//	wait_comp_time += (wtime() - blk_tm);
-//
-//	io_this_tm = wtime();
-//	vertex_t *io_buff_src = buff_src_vert[buff_ptr_io];
-//	vertex_t *io_buff_dest = buff_dest[buff_ptr_io];
-//	cd->load_chunk_full();
-//	cd->get_chunk();
-//
-//	//Once entering here. 
-//	//-dump out at least half submissions
-//	//-if at half, still NULL, dump all
-//	index_t num_elements = 0;
-//	while(true)
-//	{
-//		cd->load_chunk_full();
-//		circle *loadc=cd->get_chunk();
-//		index_t processed_chunk = 0;
-//		//a new loaded circle is empty
-//		//we are good to go.
-//		if(loadc->is_empty()) break;
-//
-//		while(!loadc->is_empty())
-//		{
-//			index_t chunk_id = loadc->de_circle();
-//			struct chunk *pinst = cd->cache[chunk_id];	
-//			index_t blk_beg_off = pinst->blk_beg_off;
-//			index_t num_verts = pinst->load_sz;
-//			vertex_t vert_id = pinst->beg_vert;
-//
-//			//process one chunk
-//			while(true)
-//			{
-//				index_t beg = beg_pos_ptr[vert_id-row_ranger_beg]-blk_beg_off;
-//				index_t end = beg+beg_pos_ptr[vert_id+1-row_ranger_beg]- 
-//					beg_pos_ptr[vert_id-row_ranger_beg];
-//
-//				//possibly vert_id starts from preceding data block.
-//				//there by beg<0 is possible
-//				if(beg<0) beg = 0;
-//
-//				if(end>num_verts) end = num_verts;
-//				for( ;beg<end; ++beg)
-//				{
-//					io_buff_src[num_elements] = vert_id;
-//					io_buff_dest[num_elements++] = pinst->buff[beg];
-//				}
-//				++vert_id;
-//
-//				if(vert_id >= this->row_ranger_end) break;
-//				if(beg_pos_ptr[vert_id-row_ranger_beg]-blk_beg_off > num_verts) 
-//					break;
-//			}
-//
-//			pinst->status = EVICTED;
-//			cd->circ_free_chunk->en_circle(chunk_id);
-//			++processed_chunk;
-//
-//			//issue 16 requests each time
-//			if(processed_chunk==((cd->io_limit)>>1))
-//			{
-//				cd->load_chunk_full();
-//				cd->get_chunk();
-//				processed_chunk=0;
-//			}
-//
-//			if(num_elements > buff_max_vert - cd->vert_per_chunk)
-//				goto fullpoint;
-//		}
-//	}
-//
-//fullpoint:
-//	cd->load_chunk_full();
-//	cd->get_chunk();
-//
-//	buff_edge_count[buff_ptr_io] = num_elements;
-//	circ_load_buff->en_circle(buff_ptr_io);
-//	is_bsp_done = (num_elements == 0);
-//	io_time += (wtime() - io_this_tm);
 	return;
 }
 
@@ -925,96 +720,6 @@ void IO_smart_iterator::load_key_iolist(sa_t criterion)
 		(cd->circ_free_ctx->is_full()) &&
 		(this->reqt_blk_count == 0))
 		is_bsp_done = true;
-
-
-//	int buff_ptr_io = -1;
-//	while(is_bsp_done == false)
-//	{
-//		while((buff_ptr_io = circ_free_buff->de_circle())
-//				== -1)
-//		{
-//			cd->get_chunk();
-//			cd->load_chunk_iolist();
-//		}
-//
-//		vertex_t *io_buff = buff_dest[buff_ptr_io];
-//		cd->load_chunk_iolist();
-//		cd->get_chunk();
-//
-//		//Once entering here. 
-//		//-dump out at least half submissions
-//		//-if at half, still NULL, dump all
-//		index_t num_elements = 0;
-//		while(true)
-//		{
-//			cd->load_chunk_iolist();
-//			circle *loadc=cd->get_chunk();
-//			index_t processed_chunk = 0;
-//			//a new loaded circle is empty
-//			//we are good to go.
-//			if(loadc->is_empty()) break;
-//
-//			while(!loadc->is_empty())
-//			{
-//				index_t chunk_id = loadc->de_circle();
-//				struct chunk *pinst = cd->cache[chunk_id];	
-//				index_t blk_beg_off = pinst->blk_beg_off;
-//				index_t num_verts = pinst->load_sz;
-//				vertex_t vert_id = pinst->beg_vert;
-//
-//				//process one chunk
-//				while(true)
-//				{
-//					if((*is_active)(vert_id,criterion,sa_ptr, sa_prev))
-//					{
-//						index_t beg = beg_pos_ptr[vert_id-row_ranger_beg]-blk_beg_off;
-//						index_t end = beg+beg_pos_ptr[vert_id+1-row_ranger_beg]- 
-//							beg_pos_ptr[vert_id-row_ranger_beg];
-//
-//						//possibly vert_id starts from preceding data block.
-//						//there by beg<0 is possible
-//						if(beg<0) beg = 0;
-//
-//						if(end>num_verts) end = num_verts;
-//						for( ;beg<end; ++beg)
-//						{
-//							//assert(pinst->buff[beg]<1262485504);
-//							io_buff[num_elements++] = pinst->buff[beg];
-//						}
-//					}
-//					++vert_id;
-//
-//					if(vert_id >= this->row_ranger_end) break;
-//					if(beg_pos_ptr[vert_id-row_ranger_beg]-blk_beg_off > num_verts) 
-//						break;
-//				}
-//
-//				pinst->status = EVICTED;
-//				cd->circ_free_chunk->en_circle(chunk_id);
-//				++processed_chunk;
-//
-//				//issue 16 requests each time
-//				if(processed_chunk==((cd->io_limit)>>1))
-//				{
-//					cd->load_chunk_iolist();
-//					cd->get_chunk();
-//					processed_chunk=0;
-//				}
-//				if(num_elements > buff_max_vert - cd->vert_per_chunk)
-//					goto fullpoint;
-//			}
-//		}
-//
-//fullpoint:
-//		cd->load_chunk_iolist();
-//		cd->get_chunk();
-//
-//		buff_edge_count[buff_ptr_io] = num_elements;
-//		circ_load_buff->en_circle(buff_ptr_io);
-//		
-//		is_bsp_done = (num_elements == 0);
-//	}
-//	return;
 }
 
 

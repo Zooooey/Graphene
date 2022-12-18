@@ -138,6 +138,7 @@ int main(int argc, char **argv)
 
 		sa_t level = 0;
 		int tid = omp_get_thread_num();
+		//线程分组，每个组都有两个线程
 		int comp_tid = tid >> 1;
 		comp_t *neighbors;
 		index_t *beg_pos;
@@ -168,7 +169,7 @@ int main(int argc, char **argv)
 						MAX_USELESS,
 						io_limit,
 						&is_active);
-
+			//每个线程都有一个queue，每个queue第一个vertex_id都是root
 			front_queue_ptr[comp_tid][0] = root;
 			front_count_ptr[comp_tid] = 1;
 
@@ -211,30 +212,20 @@ int main(int argc, char **argv)
 			}
 			else it->is_io_done = false;
 #pragma omp barrier
-			cout<<"at beginning free_chunk_num:"<<it->cd->circ_free_chunk->get_sz()<<" size:"<<it->cd->circ_free_chunk->size<<" tid:"<<omp_get_thread_num()<<endl;
-			cout<<"at beginning load_chunk_num:"<<it->cd->circ_load_chunk->get_sz()<<" size:"<<it->cd->circ_load_chunk->size<<" tid:"<<omp_get_thread_num()<<endl;
-			convert_tm=wtime()-convert_tm;
 
+			convert_tm=wtime()-convert_tm;
 			if((tid & 1) == 0)
 			{
+				//working thread use a dead loop to retrieved
 				while(true)
 				{	
 					int chunk_id = -1;
 					double blk_tm = wtime();
 					uint64_t debuging = 0;
+					//polling a loaded chunk from circle queue!
 					while((chunk_id = it->cd->circ_load_chunk->de_circle())
 							== -1)
 					{
-						debuging++;
-						if(debuging%100000000 == 0)	{
-							cout<<"	debuging:"<<debuging<<endl;
-							cout<<" tid:"<<omp_get_thread_num()<<endl;
-							cout<<"while((chunk_id = it->cd->circ_load_chunk->de_circle()): chunk_id:"<<chunk_id<<endl;
-							cout<<"circ_load_chunk:"<<it->cd->circ_load_chunk->num_elem<<" size:"<<it->cd->circ_load_chunk->size<<endl;
-							cout<<"circ_free_chunk:"<<it->cd->circ_free_chunk->num_elem<<" size:"<<it->cd->circ_free_chunk->size<<endl;
-							cout<<"circ_free_ctx:"<<it->cd->circ_free_ctx->num_elem<<" size:"<<it->cd->circ_free_ctx->size<<endl;
-							cout<<"reqt_blk_count:"<<it->reqt_blk_count<<endl;
-						}
 						if(it->is_bsp_done)
 						{
 							chunk_id = it->cd->circ_load_chunk->de_circle();
@@ -242,17 +233,17 @@ int main(int argc, char **argv)
 						}
 					}
 					it->wait_io_time += (wtime() - blk_tm);
-					//cout<<"load_chunk_num:"<<it->cd->circ_load_chunk->get_sz()<<" size:"<<it->cd->circ_load_chunk->size<<" tid:"<<omp_get_thread_num()<<endl;
 
 					if(chunk_id == -1) break;
+					//chunk是从迭代器it里的cd->cache拿到的。cd是cache_driver。或许我们可以改写cache_driver达到目的
 					struct chunk *pinst = it->cd->cache[chunk_id];	
 					index_t blk_beg_off = pinst->blk_beg_off;
 					index_t num_verts = pinst->load_sz;
 					vertex_t vert_id = pinst->beg_vert;
-					//cout<<"level:"<<(unsigned int)level<<" vert_id:"<<vert_id<<endl;
 					//process one chunk
 					while(true)
 					{
+						//vert_id is the id currently processing, level used to check bfs level.
 						if(sa[vert_id] == (unsigned int)level)
 						{
 							index_t beg = beg_pos[vert_id - it->row_ranger_beg] 
@@ -260,8 +251,6 @@ int main(int argc, char **argv)
 							index_t end = beg + beg_pos[vert_id + 1 - 
 								it->row_ranger_beg]- 
 								beg_pos[vert_id - it->row_ranger_beg];
-							//cout<<"	neighbor beg:"<<beg<<" neighbor end:"<<end<<endl;
-
 							//possibly vert_id starts from preceding data block.
 							//there by beg<0 is possible
 							if(beg<0) beg = 0;
@@ -269,27 +258,33 @@ int main(int argc, char **argv)
 							if(end>num_verts) end = num_verts;
 							for( ;beg<end; ++beg)
 							{
-								vertex_t nebr = pinst->buff[beg];
+								//这个nebr应该是邻居的意思，在这个范围内把邻居找出来，让sa[nebr]赋值level+1
+								vertex_t nebr = pinst->buff[beg];//遍历过程的vertex_id从pinst->buff里得到。而pinst这里是一个chunk。关键需要改变pinst里的内容才行。
+								//没被赋值过的都是INFTY，所以就赋值。
 								if(sa[nebr] == INFTY)
 								{
 									sa[nebr]=(unsigned int)level+1;
-									if(front_count <= it->col_ranger_end - it->col_ranger_beg)
+									//为什么要判断front_count?
+									if(front_count <= it->col_ranger_end - it->col_ranger_beg){
+										//这里很好理解，每个comp_tid记录自己的front_queue，里面记录的是neighbor_id;
 										it->front_queue[comp_tid][front_count] = nebr;
+									}
 									front_count++;
 								}
 							}
 						}
+						//id是连续的，所以这里++
 						++vert_id;
-						//cout<<"++vert_id:"<<vert_id<<endl;
+						
+						//这里id超过row_ranger_end就终止循环
 						if(vert_id >= it->row_ranger_end){
-							 //cout<<"vert_id >= it->row_ranger_end! vert_id:"<<vert_id<<" row_ranger_end:"<<it->row_ranger_end<<endl;
 							 break;
 						} else {
 							
 						}
+						//vert_id - row_ranger_beg的含义是
 						if(beg_pos[vert_id - it->row_ranger_beg]
 								- blk_beg_off > num_verts) {
-							 //cout<<"break! vert_id:"<<vert_id<<" row_ranger_beg:"<<it->row_ranger_beg<<" blk_beg_off:"<<blk_beg_off<<" num_verts:"<<num_verts<<endl;
 							break;
 						}
 						else {
@@ -297,108 +292,15 @@ int main(int argc, char **argv)
 					}
 
 					pinst->status = EVICTED;
-					//cout<<"free_chunk_num:"<<it->cd->circ_free_chunk->get_sz()<<" size:"<<it->cd->circ_free_chunk->size<<" tid:"<<omp_get_thread_num()<<endl;
 					assert(it->cd->circ_free_chunk->en_circle(chunk_id)!= -1);
 				}
-
-				//work-steal
-			//	for(int ii = tid - (col_par * 2); ii <= tid + (col_par * 2) ; ii += (col_par *4))
-			//	{
-			//		if(ii < 0 || ii >= NUM_THDS) continue;
-			//		IO_smart_iterator* it_work_steal = it_comm[ii];			
-			//		while(true)
-			//		{	
-			//			int chunk_id = -1;
-			//			double blk_tm = wtime();
-			//			while((chunk_id = it_work_steal->cd->circ_load_chunk->de_circle())
-			//					== -1)
-			//			{
-			//				if(it_work_steal->is_bsp_done)
-			//				{
-			//					chunk_id = it_work_steal->cd->circ_load_chunk->de_circle();
-			//					break;
-			//				}
-			//			}
-			//			it_work_steal->wait_io_time += (wtime() - blk_tm);
-
-			//			if(chunk_id == -1) break;
-			//			
-			//			//printf("%dhelps%d-for%d\n", tid, ii, chunk_id);
-			//			struct chunk *pinst = it_work_steal->cd->cache[chunk_id];	
-			//			index_t blk_beg_off = pinst->blk_beg_off;
-			//			index_t num_verts = pinst->load_sz;
-			//			vertex_t vert_id = pinst->beg_vert;
-
-			//			//process one chunk
-			//			while(true)
-			//			{
-			//				if(sa[vert_id] == level)
-			//				{
-			//					index_t beg = it_work_steal->beg_pos_ptr[vert_id - it_work_steal->row_ranger_beg] 
-			//						- blk_beg_off;
-			//					index_t end = beg + it_work_steal->beg_pos_ptr[vert_id + 1 - 
-			//						it_work_steal->row_ranger_beg]- 
-			//						it_work_steal->beg_pos_ptr[vert_id - it_work_steal->row_ranger_beg];
-
-			//					//possibly vert_id starts from preceding data block.
-			//					//there by beg<0 is possible
-			//					if(beg<0) beg = 0;
-
-			//					if(end>num_verts) end = num_verts;
-			//					for( ;beg<end; ++beg)
-			//					{
-			//						vertex_t nebr = pinst->buff[beg];
-			//						if(sa[nebr] == INFTY)
-			//						{
-			//							sa[nebr]=level+1;
-			//							if(front_count <= it->col_ranger_end - it->col_ranger_beg)
-			//								it->front_queue[comp_tid][front_count] = nebr;
-			//							front_count++;
-			//						}
-			//					}
-			//				}
-			//				++vert_id;
-
-			//				if(vert_id >= it_work_steal->row_ranger_end) break;
-			//				if(it_work_steal->beg_pos_ptr[vert_id - it_work_steal->row_ranger_beg]
-			//						- blk_beg_off > num_verts) 
-			//					break;
-			//			}
-
-			//			pinst->status = EVICTED;
-			//			assert(it_work_steal->cd->circ_free_chunk->en_circle(chunk_id)!= -1);
-			//		}
-			//	}
-
 				it->front_count[comp_tid] = front_count;
 			}
 			else
 			{
 				while(it->is_bsp_done == false)
 				{
-					//if(it->circ_free_buff->get_sz() == 0)
-					//{
-					//	printf("worked\n");
-					//	int curr_buff = it->next(-1);
-					//	assert(curr_buff != -1);
-					//	neighbors = it -> buff_dest[curr_buff];
-					//	index_t buff_edge_count = it -> buff_edge_count[curr_buff];
-					//	//nebr_chk += buff_edge_count;
-					//	for(long i = 0;i < buff_edge_count; i++)
-					//	{
-					//		vertex_t nebr = neighbors[i];
-					//		if(sa[nebr]==INFTY)
-					//		{
-					//			//printf("new-front: %u\n", nebr);
-					//			sa[nebr]=level+1;
-					//			front_count++;
-					//		}
-					//	}
-					//	it->circ_free_buff->en_circle(curr_buff);
-					//}
-					//cout<<"load_key"<<endl;
 					it->load_key(level);
-					//it->load_key_iolist(level);
 				}
 			}
 finish_point:	

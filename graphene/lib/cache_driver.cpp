@@ -138,16 +138,22 @@ cache_driver::~cache_driver()
 	delete circ_submitted_ctx;
 }
 
+/**
+ * 异步提交指定id号的io。每个io包含多个chunk
+*/
 void cache_driver::submit_io_req(index_t io_id)
 {
 	int ret;
 	assert(io_list[io_id]->num_ios<=MAX_EVENTS);
+	//遍历io_list里某个io_req结构，并根据结构里记录的num_ios依次处理。
 	for(index_t i=0;i<io_list[io_id]->num_ios;i++)
 	{
 		//Record the address for submission
+		//获得对应iocb
 		piocb[i]=&(io_list[io_id]->io_cbp[i]);
 		index_t chunk_id = io_list[io_id]->chunk_id[i];
 		
+		//准备一个aio，从fd_csr读数据到buff里，长度对应数据大小，offset相对于fd而言。
 		io_prep_pread(&(io_list[io_id]->io_cbp[i]), 
 				fd_csr,
 				cache[chunk_id]->buff, 
@@ -164,6 +170,7 @@ void cache_driver::submit_io_req(index_t io_id)
 		//	exit(-1);
 		//}
 		
+		//fetch_sz记录已经读取的数据大小
 		fetch_sz += cache[chunk_id]->load_sz * sizeof(vertex_t);
 	}
 
@@ -287,7 +294,7 @@ void cache_driver::load_chunk()
 			
 			//从环形缓冲区获取一个free_chunk
 			index_t chunk_id = circ_free_chunk->de_circle();
-			//在req对象的里标记这个chunk的id
+			//在req对象的里标记这个chunk的id，同时num_ios也是aio的iocb数目
 			req->chunk_id[req->num_ios++] = chunk_id;
 
 			
@@ -307,11 +314,11 @@ void cache_driver::load_chunk()
 			//更新metadata，并标记 位loading。
 			cache[chunk_id]->status = LOADING;
 			index_t beg_blk_id = load_blk_off;
-			cache[chunk_id]->beg_vert= blk_beg_vert[beg_blk_id];
-			cache[chunk_id]->blk_beg_off=VERT_PER_BLK * beg_blk_id;
+			cache[chunk_id]->beg_vert = blk_beg_vert[beg_blk_id];
+			cache[chunk_id]->blk_beg_off = VERT_PER_BLK * beg_blk_id;
 			cache[chunk_id]->load_sz = VERT_PER_BLK;
 			
-			//Loading is done
+			//Loading is done：待取blk的count==0，说明后面没有需要再读取的blk了。
 			if(*reqt_blk_count == 0)
 			{
 				goto finishpoint;
@@ -356,13 +363,14 @@ void cache_driver::load_chunk()
 
 
 				//start a new io_ctx;
-				//如果free_ctx好像是放出一个free_ctx给下一个loop用的。
+				
 				if(circ_free_ctx->get_sz()==0)
 				{
+					//如果没有可用的free_ctx，则return
 					io_submit_time += (wtime() - this_time);
 					return;
 				}
-				//这里放出来给下一个loop？
+				//得到一个新的free_ctx,做好初始化
 				io_id = circ_free_ctx->de_circle();
 				req = io_list[io_id];
 				req->num_ios=0;
@@ -375,6 +383,7 @@ finishpoint:
 	//avoid io_ctx miss tracking
 	if(io_list[io_id]->num_ios != 0)
 	{
+		//既然这里又提交一次，肯定有个对应的线程来处理它
 		circ_submitted_ctx->en_circle(io_id);
 		submit_io_req(io_id);
 	}
@@ -631,7 +640,6 @@ void cache_driver::load_chunk_full()
 	}
 	else circ_free_ctx->en_circle(io_id);
 	io_submit_time += (wtime() - this_time);
-		
 }
 
 

@@ -21,6 +21,7 @@ int main(int args, char **argv)
 	const int file_count = atoi(argv[2]);
 	const int num_rows = atoi(argv[3]);
 	const int num_cols = atoi(argv[4]);
+	//这里线程自由输入，和行列无关。
 	const int num_thds = atoi(argv[5]);
 
 	typedef long index_t;
@@ -35,7 +36,8 @@ int main(int args, char **argv)
 	/*figure out vertex and edge count*/
 	glb_vert_ranger<index_t, vertex_t, file_vertex_t>
 		(prefix, file_count, num_thds, max_vert, min_vert, edge_count);
-		
+	
+	//到这里max_vert被赋值为整个graph里最大的vertex_id
 	/*figure out normal 2d partition row and col ranger*/
 	double tm_part = wtime();
 	//p2d_partition<index_t, vertex_t, file_vertex_t>

@@ -37,6 +37,7 @@ void csr_2d_mem (
 		beg_pos[tid] = new index_t[row_sz + 1];
 		
 		//reading beg_pos
+		//reading beg_pos的目的是读取每个col块的csr格式的idx值（每个点相比于前一个点的出度累加）
 		char filename[256];
 		sprintf(filename, "%s_beg.%d_%d_of_%dx%d.bin", prefix, 
 				my_row , tid % num_cols, num_rows, num_cols);
@@ -46,6 +47,7 @@ void csr_2d_mem (
 		assert(fread(beg_pos[tid], sizeof(index_t), row_sz + 1, fd) == row_sz + 1);
 		fclose(fd);
 		
+		//从beg_pos的存储与信息可以知道
 		csr[tid] = new vertex_t[beg_pos[tid][row_sz]];
 
 		//Once beg_pos is loaded, we know the number edges for each par

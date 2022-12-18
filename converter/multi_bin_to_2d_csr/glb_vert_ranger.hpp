@@ -64,7 +64,7 @@ glb_vert_ranger(
 		return;
 	}
 
-
+	//这里记录每个线程处理的n个文件集合的统计信息，例如:comm
 	index_t *comm_num_edges = new index_t[num_thds];
 	vertex_t *comm_min_vert = new vertex_t[num_thds];
 	vertex_t *comm_max_vert = new vertex_t[num_thds];
@@ -74,7 +74,9 @@ glb_vert_ranger(
 	num_threads(num_thds)
 	{
 		int tid = omp_get_thread_num();
+		//文件数量除以线程数，如果文件数是201，线程96。那么step=2
 		int step = file_count/num_thds;
+		//remainder是余数，剩9
 		int remainder = file_count - num_thds * step;
 		int my_file_beg;
 
@@ -88,6 +90,16 @@ glb_vert_ranger(
 
 		int my_file_end = my_file_beg + step;
 
+		//tid=0时，[my_file_beg,end) = [0,3)
+		//tid=1时，[3，6)
+		//....
+		//tid=8时, [24,27)
+
+
+		//tid=9时,因为step=2，因此[18+9=27,27+2=29)
+		//tid=10时,[29, 31)
+		//总结：每个线程都有自己的一个区间，这个区间代表着什么？
+
 		// for(int i = 0; i < num_thds; i++)
 		// {
 		//     if(tid == i)
@@ -99,8 +111,10 @@ glb_vert_ranger(
 		 vertex_t max_vert = 0;
 		 char filename[256];
 
+		//总结：因为每个线程处理的是自己的区间，加上我们处理的时候把一个原始二进制文件分成了多个小文件片。因此每个线程都打开对应数量自己的小文件片。
 		 while(my_file_beg < my_file_end)
 		 {
+
 		     sprintf(filename, "%s-%05d.bin", prefix, my_file_beg);
 		     if(tid==0) 
 		         printf("Processing %s, %lf seconds\n", filename, wtime()-tm);
@@ -110,10 +124,11 @@ glb_vert_ranger(
 		         ((const char *)filename);
 		     inst->vert_ranger();
 
-		     ///
+		     //由于每个线程不止读一个文件，因此min_vert和max_vert
 		     if(min_vert > inst->min_vert) min_vert = inst->min_vert;
 		     if(max_vert < inst->max_vert) max_vert = inst->max_vert;
 		     
+			 //累加本线程所有待处理文件的边总量
 		     my_edge_count += inst->num_edges;
 		     delete inst;
 		     my_file_beg++;

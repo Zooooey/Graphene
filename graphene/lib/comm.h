@@ -46,8 +46,7 @@ inline off_t fsize(const char *filename) {
 struct chunk
 {
 	int status;//- define the chunks status. as EVICTED, LOADING ... 
-	vertex_t beg_vert;//first vert whose neighbors 
-												//- are stored in this chunk 
+	vertex_t beg_vert;//first vert whose neighbors are stored in this chunk 
 	index_t blk_beg_off;//the begin pos of this block
 	vertex_t *buff;//buffer for loading data
 	index_t load_sz;//-#verts loaded in this chunk
