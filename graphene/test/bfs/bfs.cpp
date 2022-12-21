@@ -62,8 +62,6 @@ int main(int argc, char **argv)
 
 	//TODO:用一个bool数组确定哪些点在cache哪些不在。
 	
-
-	
 	assert(NUM_THDS==(row_par*col_par*2));
 	sa_t *sa = NULL;
 	index_t *comm = new index_t[NUM_THDS];
@@ -83,14 +81,14 @@ int main(int argc, char **argv)
 	//| MAP_HUGETLB , 0, 0);
 
 	//mark:初始化填充一个cache
-	set<uint32_t>** cache_list = new set<uint32_t>*[vert_count];
+	set<uint32_t>** static_cache = new set<uint32_t>*[vert_count];
 	for(uint32_t i =0;i<vert_count;i++){
-		cache_list[i] = nullptr;
+		static_cache[i] = nullptr;
 	}
 	//fake:除了0，所有的点都只有一个假后继节点，就是自己。
 	for(uint32_t i=1;i<vert_count;i++){
-		cache_list[i] = new set<uint32_t>();
-		cache_list[i]->insert(i);
+		static_cache[i] = new set<uint32_t>();
+		static_cache[i]->insert(i);
 	}
 
 	if(sa==MAP_FAILED)
@@ -138,7 +136,7 @@ int main(int argc, char **argv)
 #pragma omp parallel \
 	num_threads (NUM_THDS) \
 	shared(sa, root, comm, front_queue_ptr, \
-			front_count_ptr, col_ranger_ptr, cache_list)
+			front_count_ptr, col_ranger_ptr, static_cache)
 	{
 		std::stringstream travss;
 		travss.str("");
@@ -170,7 +168,7 @@ int main(int argc, char **argv)
 		{
 			IO_smart_iterator *it_temp = 
 				new IO_smart_iterator(
-					    cache_list,
+					    static_cache,
 						front_queue_ptr,
 						front_count_ptr,
 						col_ranger_ptr,
@@ -186,7 +184,7 @@ int main(int argc, char **argv)
 						MAX_USELESS,
 						io_limit,
 						&is_active);
-			it_temp->cache_list = cache_list;
+			it_temp->static_cache = static_cache;
 			//每个线程都有一个queue，每个queue第一个vertex_id都是root
 			front_queue_ptr[comp_tid][0] = root;
 			front_count_ptr[comp_tid] = 1;
@@ -219,7 +217,7 @@ int main(int argc, char **argv)
 			convert_tm=wtime();
 			if((tid & 1) == 0)
 			{
-				cout<<"again!"<<endl;
+				// cout<<"again!"<<endl;
 				it->is_bsp_done = false;
 				if((prev_front_count * 100.0)/ vert_count > 2.0) 
 					it->req_translator(level);
@@ -240,27 +238,30 @@ int main(int argc, char **argv)
 					int chunk_id = -1;
 					double blk_tm = wtime();
 					uint64_t debuging = 0;
+					//=================handle cache begin==================
+					/*原生逻辑在这个阶段只做了如下事情：
+					1. 判断chunk对应的vert_id是不是我们需要处理的当前level的点(cache不需要考虑这个)
+					2. 判断该邻居有没有被遍历过sa[nebr] == INFTY,若没有，设置它的sa[nebr] = level+1
+					3. 把符合遍历的邻居节点推入front_queue里。
+					*/
 					if (!it->vert_hit_in_cache->empty())
+					{
+						for (auto it = vert_hit_in_cache->begin(); it != vert_hit_in_cache->end(); it++)
 						{
-							for (auto it = vert_hit_in_cache->begin();it!=vert_hit_in_cache->end();it++){
-							for (uint32_t i = 0; i < cache_list.size(); i++)
+							vertex_t nebr = static_cast<vertex_t>(*it);
+							if (sa[nebr] == INFTY)
 							{
-								set<uint32_t> *neighbors = cache_list[i];
-								for (uint32_t j = 0; j < neighbors->size(); j++)
+								sa[nebr] = (unsigned int)level + 1;
+								if (front_count <= it->col_ranger_end - it->col_ranger_beg)
 								{
-									vertex_t nebr = static_cast<vertex_t>(neighbors->at(j));
-									if (sa[nebr] == INFTY)
-									{
-										sa[nebr] = (unsigned int)level + 1;
-										if (front_count <= it->col_ranger_end - it->col_ranger_beg)
-										{
-											it->front_queue[comp_tid][front_count] = nebr;
-										}
-										front_count++;
-									}
+									it->front_queue[comp_tid][front_count] = nebr;
 								}
+								front_count++;
 							}
 						}
+					}
+					vert_hit_in_cache->clear();
+					//=================handle cache end==================
 					//polling a loaded chunk from circle queue!
 					while((chunk_id = it->cd->circ_load_chunk->de_circle())
 							== -1)

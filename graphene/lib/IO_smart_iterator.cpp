@@ -349,10 +349,24 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 	//At the end of every level, reqt_blk_bitmap should be all 0s.
 	//since all requests are satisfied.
 	reqt_blk_count = 0;
+	vert_hit_in_cache.clear();
 	for(index_t i = row_ranger_beg; i < row_ranger_end; i++)
 //	for(index_t i = col_ranger_beg; i < col_ranger_end; i++)
 		if((*is_active)(i,criterion,sa_ptr, sa_prev))
 		{
+			//通过is_active判断后，点i已经被认定为本轮需要读取neighbors的点了。因此在这里从cache里取出该点i的临边后，就可以推入vert_hit_in_cache，然后continue。走和reqt_blk_bitmap类似的流程，让后续逻辑处理这些邻居点。
+
+			bool in_cache = static_cache[i] != nullptr;
+			if (in_cache)
+			{
+				set<uint32_t> *vert_neighbors_cache = static_cache[i];
+				for (uint32_t nei_cache_i = 0; nei_cache_i < vert_neighbors_cache.size(); nei_cache_i++)
+				{
+					vert_hit_in_cache.push_back(vert_neighbors_cache->at(nei_cache_i));
+				}
+				continue;
+			}
+
 			index_t beg = beg_pos_ptr[i - row_ranger_beg];
 			index_t end = beg_pos_ptr[i+1 - row_ranger_beg];
 
@@ -437,21 +451,20 @@ void IO_smart_iterator::req_translator_queue()
 				for(index_t m = 0; m < front_count[row_ptr * num_cols + col_ptr]; m ++)
 				{
 					vertex_t i = front_queue[row_ptr * num_cols + col_ptr][m];
-					//fake:
-					//TODO:implment 'in_cache'
-					bool in_cache = cache_list[i] != nullptr;
-					
-					//TODO:用一个bool数组确定哪些点在cache哪些不在。若在这发现i在cache里，直接把i的临边全部装入一个tid专属的next_queue里。
-					if(in_cache){
-						set<uint32_t>* vert_neighbors_cache = cache_list[i];
-						for(uint32_t nei_cache_i = 0; nei_cache_i<vert_neighbors_cache.size();nei_cache_i++){
-						vert_hit_in_cache.push_back(vert_neighbors_cache->at(nei_cache_i));
-}
-						//TODO: put neighbors of i into chunk, what if there aren't free chunk? block here!!!!
-						continue;
-					}
 					
 					if(i < row_ranger_beg || i >= row_ranger_end) continue;
+
+					//这里的逻辑有点复杂，细节很多，但不管怎么说，既然该逻辑认定i需要读取neighbors，那么cache逻辑也一样可以。
+					bool in_cache = static_cache[i] != nullptr;
+					if (in_cache)
+					{
+						set<uint32_t> *vert_neighbors_cache = static_cache[i];
+						for (uint32_t nei_cache_i = 0; nei_cache_i < vert_neighbors_cache.size(); nei_cache_i++)
+						{
+							vert_hit_in_cache.push_back(vert_neighbors_cache->at(nei_cache_i));
+						}
+						continue;
+					}
 
 					index_t beg = beg_pos_ptr[i - row_ranger_beg];
 					index_t end = beg_pos_ptr[i+1 - row_ranger_beg];
