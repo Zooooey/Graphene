@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 	printf(" > %d K-core computation ...\n", criterion);
 	sa=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+			| MAP_HUGETLB , 0, 0);
 	if(sa==MAP_FAILED)
 	{	
 		perror("mmap");

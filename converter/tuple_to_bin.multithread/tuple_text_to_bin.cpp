@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <ctype.h>
 
+
 using namespace std;
 typedef long vertex_t;
 typedef long index_t;
@@ -65,12 +66,13 @@ int main(int argc, char** argv){
 			sprintf(filename, "%s-%05d", prefix, my_file_beg);
 
 			size_t file_size = fsize(filename);
+			cout<<"file_size="<<file_size<<" of "<<filename<<endl;
 			int fd=open(filename,O_CREAT|O_RDWR,00666 );
 			if(fd ==-1) perror("fname open");
 			ss_head = (char*)mmap(NULL,file_size,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
 			close(fd);
 
-			printf("Processing %s, size = %ld\n", filename, file_size);
+			//printf("Processing %s, size = %ld\n", filename, file_size);
 			size_t head_offset=0;
 			while(ss_head[head_offset]=='%'){
 				while(ss_head[head_offset]!='\n'){
@@ -120,9 +122,9 @@ int main(int argc, char** argv){
 				edge_count++;
 			}
 			edge_count /=2;
-			cout<<"edge count: "<<edge_count<<endl;
-			cout<<"max vertex id: "<<v_max<<endl;
-			cout<<"min vertex id: "<<v_min<<endl;
+			//cout<<"edge count: "<<edge_count<<endl;
+			//cout<<"max vertex id: "<<v_max<<endl;
+			//cout<<"min vertex id: "<<v_min<<endl;
 
 
 			curr=0;
@@ -136,6 +138,9 @@ int main(int argc, char** argv){
 			if(fd1 ==-1) perror("fname open");
 			assert(ftruncate(fd1, edge_count*sizeof(packed_edge)) ==0);
 			packed_edge* edge = (packed_edge*)mmap(NULL,edge_count*sizeof(packed_edge),PROT_READ|PROT_WRITE,MAP_SHARED,fd1,0);
+			if(edge == MAP_FAILED){
+				perror("map edge");
+			}
 			close(fd1);
 			size_t offset=0;
 

@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 	
 	sa=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+			| MAP_HUGETLB , 0, 0);
 	if(sa==MAP_FAILED)
 	{	
 		perror("mmap");
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 
 	color_redirect=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+			| MAP_HUGETLB , 0, 0);
 	if(color_redirect==MAP_FAILED)
 	{	
 		perror("mmap");
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 	int *odeg_glb=(int *)mmap(NULL,
 		sizeof(int)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+		| MAP_HUGETLB , 0, 0);
 	
 	if(odeg_glb==MAP_FAILED)
 	{	

@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 	
 	sa_curr=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+		| MAP_HUGETLB , 0, 0);
 	if(sa_curr==MAP_FAILED)
 	{	
 		perror("mmap");
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 	
 	sa_next=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+		| MAP_HUGETLB , 0, 0);
 	
 	if(sa_next==MAP_FAILED)
 	{	
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 	sa_t *rev_odeg_glb=(sa_t *)mmap(NULL,
 		sizeof(sa_t)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+		| MAP_HUGETLB , 0, 0);
 	
 	if(rev_odeg_glb==MAP_FAILED)
 	{	
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 	int *odeg_glb=(int *)mmap(NULL,
 		sizeof(int)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+		| MAP_HUGETLB , 0, 0);
 	
 	if(odeg_glb==MAP_FAILED)
 	{	
