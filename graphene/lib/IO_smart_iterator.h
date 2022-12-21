@@ -14,7 +14,7 @@ class IO_smart_iterator
 {
 	public:
 		set<uint32_t>** cache_list;
-		vector<set<uint32_t>*> next_cache;
+		vector<uint32_t> vert_hit_in_cache;
 		cache_driver *cd;
 		int fd_csr;
 

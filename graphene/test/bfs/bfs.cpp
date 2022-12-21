@@ -240,6 +240,27 @@ int main(int argc, char **argv)
 					int chunk_id = -1;
 					double blk_tm = wtime();
 					uint64_t debuging = 0;
+					if (!it->vert_hit_in_cache->empty())
+						{
+							for (auto it = vert_hit_in_cache->begin();it!=vert_hit_in_cache->end();it++){
+							for (uint32_t i = 0; i < cache_list.size(); i++)
+							{
+								set<uint32_t> *neighbors = cache_list[i];
+								for (uint32_t j = 0; j < neighbors->size(); j++)
+								{
+									vertex_t nebr = static_cast<vertex_t>(neighbors->at(j));
+									if (sa[nebr] == INFTY)
+									{
+										sa[nebr] = (unsigned int)level + 1;
+										if (front_count <= it->col_ranger_end - it->col_ranger_beg)
+										{
+											it->front_queue[comp_tid][front_count] = nebr;
+										}
+										front_count++;
+									}
+								}
+							}
+						}
 					//polling a loaded chunk from circle queue!
 					while((chunk_id = it->cd->circ_load_chunk->de_circle())
 							== -1)
@@ -261,26 +282,6 @@ int main(int argc, char **argv)
 					//process one chunk
 					while(true)
 					{
-						if (!it->cache_list[vert_id]!=nullptr)
-						{
-							for (uint32_t i = 0; i < cache_list.size(); i++)
-							{
-								set<uint32_t> *neighbors = cache_list[i];
-								for (uint32_t j = 0; j < neighbors->size(); j++)
-								{
-									vertex_t nebr = static_cast<vertex_t>(neighbors->at(j));
-									if (sa[nebr] == INFTY)
-									{
-										sa[nebr] = (unsigned int)level + 1;
-										if (front_count <= it->col_ranger_end - it->col_ranger_beg)
-										{
-											it->front_queue[comp_tid][front_count] = nebr;
-										}
-										front_count++;
-									}
-								}
-							}
-						}
 						//vert_id is the id currently processing, level used to check bfs level.
 						if(sa[vert_id] == (unsigned int)level)
 						{

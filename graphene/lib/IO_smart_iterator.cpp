@@ -419,7 +419,7 @@ void IO_smart_iterator::req_translator_queue()
 	//At the end of every level, reqt_blk_bitmap should be all 0s.
 	//since all requests are satisfied.
 	reqt_blk_count = 0;
-	next_cache.clear();
+	vert_hit_in_cache.clear();
 	//Only needs to check the frontier queue whose col_ranger 
 	//overlaps with my row_ranger
 	for(index_t row_ptr = 0; row_ptr < num_rows; row_ptr ++)
@@ -444,7 +444,9 @@ void IO_smart_iterator::req_translator_queue()
 					//TODO:用一个bool数组确定哪些点在cache哪些不在。若在这发现i在cache里，直接把i的临边全部装入一个tid专属的next_queue里。
 					if(in_cache){
 						set<uint32_t>* vert_neighbors_cache = cache_list[i];
-						next_cache.push_back(vert_neighbors_cache);
+						for(uint32_t nei_cache_i = 0; nei_cache_i<vert_neighbors_cache.size();nei_cache_i++){
+						vert_hit_in_cache.push_back(vert_neighbors_cache->at(nei_cache_i));
+}
 						//TODO: put neighbors of i into chunk, what if there aren't free chunk? block here!!!!
 						continue;
 					}
