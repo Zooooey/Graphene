@@ -333,6 +333,9 @@ finish_point:
 			prev_front_count = front_count;
 			front_count = 0;
 			++level;
+			if(level == 2){
+				exit(-1);
+			}
 //#pragma omp barrier
 			//if(!tid) std::cout<<"\n\n\n";
 //#pragma omp barrier

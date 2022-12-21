@@ -387,7 +387,7 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 //if(comp_tid==0)		std::cout<<"Thread "<<comp_tid<<" #blk="<<reqt_blk_count<<
 //			" #freechunks="<<cd->circ_free_chunk->num_elem<<
 //			" #freectx="<<cd->circ_free_ctx->num_elem<<
-			"\n";
+//			"\n";
 //	#pragma omp barrier
 //}
 }
@@ -437,6 +437,13 @@ void IO_smart_iterator::req_translator_queue()
 				for(index_t m = 0; m < front_count[row_ptr * num_cols + col_ptr]; m ++)
 				{
 					vertex_t i = front_queue[row_ptr * num_cols + col_ptr][m];
+					//TODO:implment 'in_cache'
+					bool in_cache = false;
+					if(in_cache){
+						//TODO: put neighbors of i into chunk, what if there aren't free chunk? block here!!!!
+						continue;
+					}
+					
 					if(i < row_ranger_beg || i >= row_ranger_end) continue;
 
 					index_t beg = beg_pos_ptr[i - row_ranger_beg];
@@ -659,7 +666,6 @@ int IO_smart_iterator::next(int used_buff)
 //Pointer chasing based load key
 void IO_smart_iterator::load_key(sa_t criterion)
 {
-
 	cd->get_chunk();
 	double blk_tm = wtime();
 	uint64_t debuging = 0;
