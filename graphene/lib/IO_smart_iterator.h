@@ -10,6 +10,8 @@ typedef bool (*cb_func)(index_t, sa_t, sa_t*, sa_t *);
 class IO_smart_iterator
 {
 	public:
+		set<uint32_t>* cache_list;
+		vector<set<uint32_t>*> next_cache;
 		cache_driver *cd;
 		int fd_csr;
 

@@ -10,6 +10,7 @@
 #include "pin_thread.h"
 #include "get_vert_count.hpp"
 #include "get_col_ranger.hpp"
+#include <set>
 using namespace std;
 
 inline bool is_active
@@ -58,7 +59,10 @@ int main(int argc, char **argv)
 	const index_t ring_vert_count = atoi(argv[12]);
 	const index_t num_buffs = atoi(argv[13]);
 	vertex_t root = (vertex_t) atol(argv[14]);
+
+	//TODO:用一个bool数组确定哪些点在cache哪些不在。
 	
+
 	
 	assert(NUM_THDS==(row_par*col_par*2));
 	sa_t *sa = NULL;
@@ -75,8 +79,20 @@ int main(int argc, char **argv)
 	
 	sa=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+			| MAP_HUGETLB , 0, 0);
 	//| MAP_HUGETLB , 0, 0);
+
+	//mark:初始化填充一个cache
+	set<uint32_t>* cache_list = new set<uint32_t>*[vert_count];
+	for(uint32_t i =0;i<vert_count;i++){
+		cache_list[i] = nullptr;
+	}
+	//fake:除了0，所有的点都只有一个假后继节点，就是自己。
+	for(uint32_t i=1;i<vert_count;i++){
+		cache_list[i] = new set<uint32_t>();
+		cache_list[i]->insert(i);
+	}
+
 	if(sa==MAP_FAILED)
 	{	
 		perror("mmap");
@@ -122,7 +138,7 @@ int main(int argc, char **argv)
 #pragma omp parallel \
 	num_threads (NUM_THDS) \
 	shared(sa, root, comm, front_queue_ptr, \
-			front_count_ptr, col_ranger_ptr)
+			front_count_ptr, col_ranger_ptr, cache_list)
 	{
 		std::stringstream travss;
 		travss.str("");
@@ -154,6 +170,7 @@ int main(int argc, char **argv)
 		{
 			IO_smart_iterator *it_temp = 
 				new IO_smart_iterator(
+					    cache_list
 						front_queue_ptr,
 						front_count_ptr,
 						col_ranger_ptr,
@@ -169,6 +186,7 @@ int main(int argc, char **argv)
 						MAX_USELESS,
 						io_limit,
 						&is_active);
+			it_temp->cache_list = cache_list;
 			//每个线程都有一个queue，每个queue第一个vertex_id都是root
 			front_queue_ptr[comp_tid][0] = root;
 			front_count_ptr[comp_tid] = 1;
@@ -243,6 +261,26 @@ int main(int argc, char **argv)
 					//process one chunk
 					while(true)
 					{
+						if (!it->cache_list.empty())
+						{
+							for (uint32_t i = 0; i < cache_list.size(); i++)
+							{
+								set<uint32_t> *neighbors = cache_list[i];
+								for (uint32_t j = 0; j < neighbors->size(); j++)
+								{
+									vertex_t nebr = static_cast<vertex_t>(neighbors->at(j));
+									if (sa[nebr] == INFTY)
+									{
+										sa[nebr] = (unsigned int)level + 1;
+										if (front_count <= it->col_ranger_end - it->col_ranger_beg)
+										{
+											it->front_queue[comp_tid][front_count] = nebr;
+										}
+										front_count++;
+									}
+								}
+							}
+						}
 						//vert_id is the id currently processing, level used to check bfs level.
 						if(sa[vert_id] == (unsigned int)level)
 						{
@@ -273,6 +311,7 @@ int main(int argc, char **argv)
 								}
 							}
 						}
+						//TODO:这里把tid自己的cache_queue里的东西拿出来放入front_queue，然后清空
 						//id是连续的，所以这里++
 						++vert_id;
 						

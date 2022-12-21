@@ -34,7 +34,7 @@ IO_smart_iterator::IO_smart_iterator(
 	reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks * 10,
 	//reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * 33554432,//FOR FRIENDSTER/TWITTER
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);	
+			| MAP_HUGETLB , 0, 0);	
 	
 	assert(reqt_list != MAP_FAILED);
 	//assert(sizeof(bit_t) == 1);
@@ -126,7 +126,7 @@ IO_smart_iterator::IO_smart_iterator(
 	reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks * 4,
 	//reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * 33554432,//FOR FRIENDSTER/TWITTER
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);	
+			| MAP_HUGETLB , 0, 0);	
 
 	assert(reqt_list != MAP_FAILED);
 	buff_max_vert = ring_vert_count;
@@ -227,7 +227,7 @@ IO_smart_iterator::IO_smart_iterator(
 	
 	beg_pos=(index_t *)mmap(NULL,sz_beg,
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+			| MAP_HUGETLB , 0, 0);
 	if(beg_pos == MAP_FAILED)
 	{
 		printf("%ld\n",sz_beg);
@@ -286,7 +286,7 @@ IO_smart_iterator::IO_smart_iterator(
 	//add 64 more bits, in order for quick bitmap scan.
 	reqt_blk_bitmap=(bit_t *)mmap(NULL,((total_blks>>3)+8) * sizeof(bit_t),
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+			| MAP_HUGETLB , 0, 0);
 	if(reqt_blk_bitmap == MAP_FAILED)
 	{
 		perror("reqt_blk_bitmap mmap");
@@ -295,7 +295,7 @@ IO_smart_iterator::IO_smart_iterator(
 	
 	blk_beg_vert=(vertex_t *)mmap(NULL,total_blks * sizeof(vertex_t),
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+			| MAP_HUGETLB , 0, 0);
 	if(blk_beg_vert == MAP_FAILED)
 	{
 		printf("size: %ld\n", total_blks * sizeof(vertex_t));
@@ -419,7 +419,7 @@ void IO_smart_iterator::req_translator_queue()
 	//At the end of every level, reqt_blk_bitmap should be all 0s.
 	//since all requests are satisfied.
 	reqt_blk_count = 0;
-
+	next_cache.clear();
 	//Only needs to check the frontier queue whose col_ranger 
 	//overlaps with my row_ranger
 	for(index_t row_ptr = 0; row_ptr < num_rows; row_ptr ++)
@@ -437,9 +437,14 @@ void IO_smart_iterator::req_translator_queue()
 				for(index_t m = 0; m < front_count[row_ptr * num_cols + col_ptr]; m ++)
 				{
 					vertex_t i = front_queue[row_ptr * num_cols + col_ptr][m];
+					//fake:
 					//TODO:implment 'in_cache'
-					bool in_cache = false;
+					bool in_cache = cache_list[i] != nullptr;
+					
+					//TODO:用一个bool数组确定哪些点在cache哪些不在。若在这发现i在cache里，直接把i的临边全部装入一个tid专属的next_queue里。
 					if(in_cache){
+						set<uint32_t>* vert_neighbors_cache = cache_list[i];
+						next_cache.push_back(vert_neighbors_cache);
 						//TODO: put neighbors of i into chunk, what if there aren't free chunk? block here!!!!
 						continue;
 					}
