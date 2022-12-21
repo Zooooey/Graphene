@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 	//| MAP_HUGETLB , 0, 0);
 
 	//mark:初始化填充一个cache
-	set<uint32_t>* cache_list = new set<uint32_t>*[vert_count];
+	set<uint32_t>** cache_list = new set<uint32_t>*[vert_count];
 	for(uint32_t i =0;i<vert_count;i++){
 		cache_list[i] = nullptr;
 	}
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
 		{
 			IO_smart_iterator *it_temp = 
 				new IO_smart_iterator(
-					    cache_list
+					    cache_list,
 						front_queue_ptr,
 						front_count_ptr,
 						col_ranger_ptr,
@@ -261,7 +261,7 @@ int main(int argc, char **argv)
 					//process one chunk
 					while(true)
 					{
-						if (!it->cache_list.empty())
+						if (!it->cache_list[vert_id]!=nullptr)
 						{
 							for (uint32_t i = 0; i < cache_list.size(); i++)
 							{
