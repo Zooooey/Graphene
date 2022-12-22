@@ -31,10 +31,12 @@ IO_smart_iterator::IO_smart_iterator(
 			beg_pos, MAX_USELESS, io_limit, p_func)
 {
 	//reqt_list
+	cout<<"mmap a reqt_list as size: "<<sizeof(index_t) * total_blks * 10<<endl;
 	reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks * 10,
 	//reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * 33554432,//FOR FRIENDSTER/TWITTER
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB , 0, 0);	
+			, 0, 0);	
+			//| MAP_HUGETLB , 0, 0);	
 	
 	assert(reqt_list != MAP_FAILED);
 	//assert(sizeof(bit_t) == 1);
@@ -360,9 +362,10 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 			if (in_cache)
 			{
 				set<uint32_t> *vert_neighbors_cache = static_cache[i];
-				for (uint32_t nei_cache_i = 0; nei_cache_i < vert_neighbors_cache.size(); nei_cache_i++)
+				for(auto iter = vert_neighbors_cache->begin();iter!=vert_neighbors_cache->end();iter++)
 				{
-					vert_hit_in_cache.push_back(vert_neighbors_cache->at(nei_cache_i));
+//					cout<<"push cache vert "<<*iter<<endl;
+					vert_hit_in_cache.push_back(*iter);
 				}
 				continue;
 			}
@@ -453,17 +456,20 @@ void IO_smart_iterator::req_translator_queue()
 					vertex_t i = front_queue[row_ptr * num_cols + col_ptr][m];
 					
 					if(i < row_ranger_beg || i >= row_ranger_end) continue;
+					
+					cout<<"i:"<<i<<endl;
 
 					//这里的逻辑有点复杂，细节很多，但不管怎么说，既然该逻辑认定i需要读取neighbors，那么cache逻辑也一样可以。
 					bool in_cache = static_cache[i] != nullptr;
 					if (in_cache)
 					{
-						set<uint32_t> *vert_neighbors_cache = static_cache[i];
-						for (uint32_t nei_cache_i = 0; nei_cache_i < vert_neighbors_cache.size(); nei_cache_i++)
-						{
-							vert_hit_in_cache.push_back(vert_neighbors_cache->at(nei_cache_i));
-						}
-						continue;
+				set<uint32_t> *vert_neighbors_cache = static_cache[i];
+				for(auto iter = vert_neighbors_cache->begin();iter!=vert_neighbors_cache->end();iter++)
+				{
+					cout<<"push cache vert "<<*iter<<endl;
+					vert_hit_in_cache.push_back(*iter);
+				}
+				continue;
 					}
 
 					index_t beg = beg_pos_ptr[i - row_ranger_beg];

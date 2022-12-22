@@ -80,6 +80,7 @@ int main(int argc, char **argv)
 			| MAP_HUGETLB , 0, 0);
 	//| MAP_HUGETLB , 0, 0);
 
+	cout<<"Init static cache...."<<endl;
 	//mark:初始化填充一个cache
 	set<uint32_t>** static_cache = new set<uint32_t>*[vert_count];
 	for(uint32_t i =0;i<vert_count;i++){
@@ -129,6 +130,7 @@ int main(int argc, char **argv)
 	int socket_one[12]={0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17};
 	int socket_two[12]={6, 7, 8, 9, 10, 11, 18, 19, 20, 21, 22, 23};
 	memset(sa, INFTY, sizeof(sa_t)*vert_count);
+	cout<<"Threads Num:"<<NUM_THDS<<" to build IO_smart_iterator..."<<endl;
 	sa[root] = 0;
 	IO_smart_iterator **it_comm = new IO_smart_iterator*[NUM_THDS];
 	
@@ -217,7 +219,7 @@ int main(int argc, char **argv)
 			convert_tm=wtime();
 			if((tid & 1) == 0)
 			{
-				// cout<<"again!"<<endl;
+				 cout<<"again!"<<endl;
 				it->is_bsp_done = false;
 				if((prev_front_count * 100.0)/ vert_count > 2.0) 
 					it->req_translator(level);
@@ -244,23 +246,28 @@ int main(int argc, char **argv)
 					2. 判断该邻居有没有被遍历过sa[nebr] == INFTY,若没有，设置它的sa[nebr] = level+1
 					3. 把符合遍历的邻居节点推入front_queue里。
 					*/
-					if (!it->vert_hit_in_cache->empty())
+					if (!it->vert_hit_in_cache.empty())
 					{
-						for (auto it = vert_hit_in_cache->begin(); it != vert_hit_in_cache->end(); it++)
+						cout<<it->vert_hit_in_cache.size()<<" verts hit in cache"<<endl;
+						for (auto iter = it->vert_hit_in_cache.begin(); iter != it->vert_hit_in_cache.end(); iter++)
 						{
-							vertex_t nebr = static_cast<vertex_t>(*it);
-							if (sa[nebr] == INFTY)
-							{
+							
+						//	cout<<"vert hit in cache:"<<*iter<<endl;
+							vertex_t nebr = static_cast<vertex_t>(*iter);
+							
+							//if (sa[nebr] == INFTY)
+							//{
 								sa[nebr] = (unsigned int)level + 1;
 								if (front_count <= it->col_ranger_end - it->col_ranger_beg)
 								{
+									//cout<<"nebr:"<<nebr<<endl;
 									it->front_queue[comp_tid][front_count] = nebr;
 								}
 								front_count++;
-							}
+							//}
 						}
 					}
-					vert_hit_in_cache->clear();
+					it->vert_hit_in_cache.clear();
 					//=================handle cache end==================
 					//polling a loaded chunk from circle queue!
 					while((chunk_id = it->cd->circ_load_chunk->de_circle())
@@ -374,9 +381,6 @@ finish_point:
 			prev_front_count = front_count;
 			front_count = 0;
 			++level;
-			if(level == 2){
-				exit(-1);
-			}
 //#pragma omp barrier
 			//if(!tid) std::cout<<"\n\n\n";
 //#pragma omp barrier
