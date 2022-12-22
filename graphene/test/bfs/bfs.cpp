@@ -11,11 +11,11 @@
 #include "get_vert_count.hpp"
 #include "get_col_ranger.hpp"
 #include <set>
-#include "Binning.hpp"
+#include "/home/ccy/Develop/GraphTools/COrder/Binning.hpp"
 using namespace std;
 
-#define CACHE_PATH "/path/to/bin_cache.txt"
-#define CACHE_RATIO 0.5
+#define CACHE_PATH "/home/ccy/data_set/twitter7/twitter7_FAM_GRAPH/bin_order.cache"
+#define CACHE_RATIO 1
 
 inline bool is_active
 (index_t vert_id,
@@ -91,9 +91,11 @@ int main(int argc, char **argv)
 		static_cache[i] = nullptr;
 	}
 	//fake:除了0，所有的点都只有一个假后继节点，就是自己。
-
+	double cache_read = wtime();
 	CacheMap *cache_map =
             BinReader::read_bin_cache(CACHE_PATH, CACHE_RATIO, vert_count);
+	cout<<"Construct Cache Time:"<<wtime()-cache_read<<" seconds(s)"<<endl;
+	
 
 	/*for(uint32_t i=1;i<vert_count;i++){
 		static_cache[i] = new set<uint32_t>();
@@ -194,6 +196,7 @@ int main(int argc, char **argv)
 						io_limit,
 						&is_active);
 			it_temp->static_cache = cache_map;
+			it_temp->vert_hit_in_cache = new uint32_t[vert_count];
 			//每个线程都有一个queue，每个queue第一个vertex_id都是root
 			front_queue_ptr[comp_tid][0] = root;
 			front_count_ptr[comp_tid] = 1;
@@ -262,8 +265,8 @@ int main(int argc, char **argv)
 						//	cout<<"vert hit in cache:"<<*iter<<endl;
 							vertex_t nebr = static_cast<vertex_t>(*iter);
 							
-							//if (sa[nebr] == INFTY)
-							//{
+							if (sa[nebr] == INFTY)
+							{
 								sa[nebr] = (unsigned int)level + 1;
 								if (front_count <= it->col_ranger_end - it->col_ranger_beg)
 								{
@@ -271,7 +274,7 @@ int main(int argc, char **argv)
 									it->front_queue[comp_tid][front_count] = nebr;
 								}
 								front_count++;
-							//}
+							}
 						}
 					}
 					it->vert_hit_in_cache.clear();

@@ -4,6 +4,7 @@
 #include "circle.h"
 #include<set>
 #include<vector>
+#include "/home/ccy/Develop/GraphTools/COrder/Binning.hpp"
 
 #ifndef __ITERATOR__
 #define __ITERATOR__
@@ -14,7 +15,8 @@ class IO_smart_iterator
 {
 	public:
 		CacheMap* static_cache;
-		vector<uint32_t> vert_hit_in_cache;
+		uint32_t* vert_hit_in_cache;
+		uint32_t vert_hit_in_cache_count;
 		cache_driver *cd;
 		int fd_csr;
 
