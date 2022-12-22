@@ -11,7 +11,11 @@
 #include "get_vert_count.hpp"
 #include "get_col_ranger.hpp"
 #include <set>
+#include "Binning.hpp"
 using namespace std;
+
+#define CACHE_PATH "/path/to/bin_cache.txt"
+#define CACHE_RATIO 0.5
 
 inline bool is_active
 (index_t vert_id,
@@ -87,10 +91,14 @@ int main(int argc, char **argv)
 		static_cache[i] = nullptr;
 	}
 	//fake:除了0，所有的点都只有一个假后继节点，就是自己。
-	for(uint32_t i=1;i<vert_count;i++){
+
+	CacheMap *cache_map =
+            BinReader::read_bin_cache(CACHE_PATH, CACHE_RATIO, vert_count);
+
+	/*for(uint32_t i=1;i<vert_count;i++){
 		static_cache[i] = new set<uint32_t>();
 		static_cache[i]->insert(i);
-	}
+	}*/
 
 	if(sa==MAP_FAILED)
 	{	
@@ -170,7 +178,6 @@ int main(int argc, char **argv)
 		{
 			IO_smart_iterator *it_temp = 
 				new IO_smart_iterator(
-					    static_cache,
 						front_queue_ptr,
 						front_count_ptr,
 						col_ranger_ptr,
@@ -186,7 +193,7 @@ int main(int argc, char **argv)
 						MAX_USELESS,
 						io_limit,
 						&is_active);
-			it_temp->static_cache = static_cache;
+			it_temp->static_cache = cache_map;
 			//每个线程都有一个queue，每个queue第一个vertex_id都是root
 			front_queue_ptr[comp_tid][0] = root;
 			front_count_ptr[comp_tid] = 1;

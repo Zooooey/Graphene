@@ -358,14 +358,18 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 		{
 			//通过is_active判断后，点i已经被认定为本轮需要读取neighbors的点了。因此在这里从cache里取出该点i的临边后，就可以推入vert_hit_in_cache，然后continue。走和reqt_blk_bitmap类似的流程，让后续逻辑处理这些邻居点。
 
-			bool in_cache = static_cache[i] != nullptr;
+			//bool in_cache = static_cache[i] != nullptr;
+			CacheElem * cache_elem = static_cache.get(i);
+			bool in_cache =  cache_elem != nullptr;
 			if (in_cache)
 			{
-				set<uint32_t> *vert_neighbors_cache = static_cache[i];
-				for(auto iter = vert_neighbors_cache->begin();iter!=vert_neighbors_cache->end();iter++)
+				for(int cache_i = 0;cache_i < cache_elem->get_out_degree();cache_i++)
+				//set<uint32_t> *vert_neighbors_cache = static_cache[i];
+				//for(auto iter = vert_neighbors_cache->begin();iter!=vert_neighbors_cache->end();iter++)
 				{
 //					cout<<"push cache vert "<<*iter<<endl;
-					vert_hit_in_cache.push_back(*iter);
+					//vert_hit_in_cache.push_back(*iter);
+					vert_hit_in_cache.push_back(cache_elem->get_neighbor_at(cache_i));
 				}
 				continue;
 			}
@@ -460,16 +464,19 @@ void IO_smart_iterator::req_translator_queue()
 					cout<<"i:"<<i<<endl;
 
 					//这里的逻辑有点复杂，细节很多，但不管怎么说，既然该逻辑认定i需要读取neighbors，那么cache逻辑也一样可以。
-					bool in_cache = static_cache[i] != nullptr;
+					CacheElem *cache_elem = static_cache.get(i);
+					bool in_cache = cache_elem != nullptr ;
 					if (in_cache)
 					{
-				set<uint32_t> *vert_neighbors_cache = static_cache[i];
-				for(auto iter = vert_neighbors_cache->begin();iter!=vert_neighbors_cache->end();iter++)
-				{
-					cout<<"push cache vert "<<*iter<<endl;
-					vert_hit_in_cache.push_back(*iter);
-				}
-				continue;
+						for (int cache_i = 0; cache_i < cache_elem->get_out_degree(); cache_i++)
+						// set<uint32_t> *vert_neighbors_cache = static_cache[i];
+						// for(auto iter = vert_neighbors_cache->begin();iter!=vert_neighbors_cache->end();iter++)
+						{
+							//					cout<<"push cache vert "<<*iter<<endl;
+							// vert_hit_in_cache.push_back(*iter);
+							vert_hit_in_cache.push_back(cache_elem->get_neighbor_at(cache_i));
+						}
+						continue;
 					}
 
 					index_t beg = beg_pos_ptr[i - row_ranger_beg];
