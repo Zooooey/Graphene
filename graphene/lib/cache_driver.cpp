@@ -66,7 +66,8 @@ cache_driver::cache_driver(
 	buff=NULL;
 	buff=(vertex_t *)mmap(NULL,chunk_sz*num_chunks,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-		| MAP_HUGETLB , 0, 0);
+		//| MAP_HUGETLB , 0, 0);
+		 , 0, 0);
 	if(buff==MAP_FAILED)
 	{
 		perror("buffer mmap");

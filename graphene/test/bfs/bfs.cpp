@@ -15,7 +15,7 @@
 using namespace std;
 
 #define CACHE_PATH "/home/ccy/data_set/twitter7/twitter7_FAM_GRAPH/bin_order.cache"
-#define CACHE_RATIO 1
+#define CACHE_RATIO 0.17
 
 inline bool is_active
 (index_t vert_id,
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
 						io_limit,
 						&is_active);
 			it_temp->static_cache = cache_map;
-			it_temp->vert_hit_in_cache = new uint32_t[vert_count];
+			it_temp->vert_hit_in_cache = new uint32_t[1600000000];
 			//每个线程都有一个queue，每个queue第一个vertex_id都是root
 			front_queue_ptr[comp_tid][0] = root;
 			front_count_ptr[comp_tid] = 1;
@@ -256,14 +256,14 @@ int main(int argc, char **argv)
 					2. 判断该邻居有没有被遍历过sa[nebr] == INFTY,若没有，设置它的sa[nebr] = level+1
 					3. 把符合遍历的邻居节点推入front_queue里。
 					*/
-					if (!it->vert_hit_in_cache.empty())
+					if (it->vert_hit_in_cache_count!=0)
 					{
-						cout<<it->vert_hit_in_cache.size()<<" verts hit in cache"<<endl;
-						for (auto iter = it->vert_hit_in_cache.begin(); iter != it->vert_hit_in_cache.end(); iter++)
+						cout<<it->vert_hit_in_cache_count<<" verts hit in cache"<<endl;
+						for(uint32_t index =0;index<it->vert_hit_in_cache_count;index++)
 						{
 							
 						//	cout<<"vert hit in cache:"<<*iter<<endl;
-							vertex_t nebr = static_cast<vertex_t>(*iter);
+							vertex_t nebr = static_cast<vertex_t>(it->vert_hit_in_cache[index]);
 							
 							if (sa[nebr] == INFTY)
 							{
@@ -277,7 +277,7 @@ int main(int argc, char **argv)
 							}
 						}
 					}
-					it->vert_hit_in_cache.clear();
+					it->vert_hit_in_cache_count=0;
 					//=================handle cache end==================
 					//polling a loaded chunk from circle queue!
 					while((chunk_id = it->cd->circ_load_chunk->de_circle())

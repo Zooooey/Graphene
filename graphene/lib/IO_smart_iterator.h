@@ -14,7 +14,7 @@ typedef bool (*cb_func)(index_t, sa_t, sa_t*, sa_t *);
 class IO_smart_iterator
 {
 	public:
-		CacheMap* static_cache;
+		CacheMap* static_cache=nullptr;
 		uint32_t* vert_hit_in_cache;
 		uint32_t vert_hit_in_cache_count;
 		cache_driver *cd;

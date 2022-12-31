@@ -128,7 +128,8 @@ IO_smart_iterator::IO_smart_iterator(
 	reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks * 4,
 	//reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * 33554432,//FOR FRIENDSTER/TWITTER
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-			| MAP_HUGETLB , 0, 0);	
+	//		| MAP_HUGETLB , 0, 0);	
+			 , 0, 0);	
 
 	assert(reqt_list != MAP_FAILED);
 	buff_max_vert = ring_vert_count;
@@ -351,7 +352,7 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 	//At the end of every level, reqt_blk_bitmap should be all 0s.
 	//since all requests are satisfied.
 	reqt_blk_count = 0;
-	vert_hit_in_cache.clear();
+	vert_hit_in_cache_count=0;
 	for(index_t i = row_ranger_beg; i < row_ranger_end; i++)
 //	for(index_t i = col_ranger_beg; i < col_ranger_end; i++)
 		if((*is_active)(i,criterion,sa_ptr, sa_prev))
@@ -369,7 +370,7 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 				{
 //					cout<<"push cache vert "<<*iter<<endl;
 					//vert_hit_in_cache.push_back(*iter);
-					vert_hit_in_cache.push_back(cache_elem->get_neighbor_at(cache_i));
+					vert_hit_in_cache[vert_hit_in_cache_count++]=cache_elem->get_neighbor_at(cache_i);
 				}
 				continue;
 			}
@@ -440,7 +441,7 @@ void IO_smart_iterator::req_translator_queue()
 	//At the end of every level, reqt_blk_bitmap should be all 0s.
 	//since all requests are satisfied.
 	reqt_blk_count = 0;
-	vert_hit_in_cache.clear();
+	vert_hit_in_cache_count=0;
 	//Only needs to check the frontier queue whose col_ranger 
 	//overlaps with my row_ranger
 	for(index_t row_ptr = 0; row_ptr < num_rows; row_ptr ++)
@@ -474,7 +475,7 @@ void IO_smart_iterator::req_translator_queue()
 						{
 							//					cout<<"push cache vert "<<*iter<<endl;
 							// vert_hit_in_cache.push_back(*iter);
-							vert_hit_in_cache.push_back(cache_elem->get_neighbor_at(cache_i));
+							vert_hit_in_cache[vert_hit_in_cache_count++]=cache_elem->get_neighbor_at(cache_i);
 						}
 						continue;
 					}

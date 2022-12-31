@@ -275,6 +275,7 @@ int main(int argc, char **argv)
 				front_count_ptr[comp_tid] = 0;
 			}
 		}
+		cout<<"ccy:step1"<<endl;
 		//----------------------
 		//Root is found
 		//-==================================
@@ -285,13 +286,16 @@ int main(int argc, char **argv)
 		double convert_tm=0;
 		index_t prev_front_count = 1;
 		index_t front_count = 0;
+		cout<<"step1-1"<<endl;
 		while(true)
 		//while(false)
 		{
+			cout<<"while true"<<endl;
 			//- Framework gives user block to process
 			//- Figures out what blocks needed next level
 			if((tid & 1) == 0)
 			{
+			cout<<"tid&1"<<endl;
 				it -> io_time = 0;
 				it -> wait_io_time = 0;
 				it -> wait_comp_time = 0;
@@ -303,19 +307,27 @@ int main(int argc, char **argv)
 			double ltm=wtime();
 			if((tid & 1) == 0)
 			{
+			cout<<"tid&1-1"<<endl;
 				it->is_bsp_done = false;
 				convert_tm=wtime();
-				if((prev_front_count * 100.0)/ vert_count > 2.0) 
+				if((prev_front_count * 100.0)/ vert_count > 2.0) {
+					cout<<"start req_translator"<<endl;
 					it->req_translator(level);
+					cout<<"end req_translator"<<endl;
+
+				}
 				else
 				{
+					cout<<"start req_translator_queue"<<endl;
 					it->req_translator_queue();
+					cout<<"end req_translator_queue"<<endl;
 				}
 				convert_tm=wtime()-convert_tm;
 			}
 			else it->is_io_done = false;
 #pragma omp barrier
 
+		cout<<"ccy:step2"<<endl;
 			if((tid & 1) == 0)
 			{
 				while(true)
@@ -379,75 +391,6 @@ int main(int argc, char **argv)
 					assert(it->cd->circ_free_chunk->en_circle(chunk_id)!= -1);
 				}
 				
-				//work-steal
-			//	for(int ii = tid - (col_par * 2); ii <= tid + (col_par * 2) ; ii += (col_par *4))
-			//	{
-			//		if(ii < 0 || ii >= NUM_THDS) continue;
-			//		IO_smart_iterator* it_work_steal = it_comm[ii];			
-			//		while(true)
-			//		{	
-			//			int chunk_id = -1;
-			//			double blk_tm = wtime();
-			//			while((chunk_id = it_work_steal->cd->circ_load_chunk->de_circle())
-			//					== -1)
-			//			{
-			//				if(it_work_steal->is_bsp_done)
-			//				{
-			//					chunk_id = it_work_steal->cd->circ_load_chunk->de_circle();
-			//					break;
-			//				}
-			//			}
-			//			it_work_steal->wait_io_time += (wtime() - blk_tm);
-
-			//			if(chunk_id == -1) break;
-			//			
-			//			//printf("%dhelps%d-for%d\n", tid, ii, chunk_id);
-			//			struct chunk *pinst = it_work_steal->cd->cache[chunk_id];	
-			//			index_t blk_beg_off = pinst->blk_beg_off;
-			//			index_t num_verts = pinst->load_sz;
-			//			vertex_t vert_id = pinst->beg_vert;
-
-			//			//process one chunk
-			//			while(true)
-			//			{
-			//				if(sa[vert_id] == level)
-			//				{
-			//					index_t beg = it_work_steal->beg_pos_ptr[vert_id - it_work_steal->row_ranger_beg] 
-			//						- blk_beg_off;
-			//					index_t end = beg + it_work_steal->beg_pos_ptr[vert_id + 1 - 
-			//						it_work_steal->row_ranger_beg]- 
-			//						it_work_steal->beg_pos_ptr[vert_id - it_work_steal->row_ranger_beg];
-
-			//					//possibly vert_id starts from preceding data block.
-			//					//there by beg<0 is possible
-			//					if(beg<0) beg = 0;
-
-			//					if(end>num_verts) end = num_verts;
-			//					for( ;beg<end; ++beg)
-			//					{
-			//						vertex_t nebr = pinst->buff[beg];
-			//						if(sa[nebr] == INFTY)
-			//						{
-			//							sa[nebr]=level+1;
-			//							if(front_count <= it->col_ranger_end - it->col_ranger_beg)
-			//								it->front_queue[comp_tid][front_count] = nebr;
-			//							front_count++;
-			//						}
-			//					}
-			//				}
-			//				++vert_id;
-
-			//				if(vert_id >= it_work_steal->row_ranger_end) break;
-			//				if(it_work_steal->beg_pos_ptr[vert_id - it_work_steal->row_ranger_beg]
-			//						- blk_beg_off > num_verts) 
-			//					break;
-			//			}
-
-			//			pinst->status = EVICTED;
-			//			assert(it_work_steal->cd->circ_free_chunk->en_circle(chunk_id)!= -1);
-			//		}
-			//	}
-
 
 				it->front_count[comp_tid] = front_count;
 			}
@@ -455,36 +398,13 @@ int main(int argc, char **argv)
 			{
 				while(it->is_bsp_done == false)
 				{
-					//if(it->circ_free_buff->get_sz() == 0)
-					//{
-					//	printf("worked\n");
-					//	int curr_buff = it->next(-1);
-					//	assert(curr_buff != -1);
-					//	neighbors = it -> buff_dest[curr_buff];
-					//	index_t buff_edge_count = it -> buff_edge_count[curr_buff];
-					//	//nebr_chk += buff_edge_count;
-					//	for(long i = 0;i < buff_edge_count; i++)
-					//	{
-					//		vertex_t nebr = neighbors[i];
-					//		if(sa[nebr]==INFTY)
-					//		{
-					//			//printf("new-front: %u\n", nebr);
-					//			sa[nebr]=level+1;
-					//			front_count++;
-					//		}
-					//	}
-					//	it->circ_free_buff->en_circle(curr_buff);
-					//}
-
 					it->load_key(level);
-					//it->load_key_iolist(level);
 				}
-				//printf("%d\n",tid);
-				//it->load_key_iolist(level);
 			}
 
 			comm[tid] = front_count;
 #pragma omp barrier
+		cout<<"ccy:step3"<<endl;
 			front_count = 0;
 			for(int i = 0 ;i< NUM_THDS; ++i)
 				front_count += comm[i];
