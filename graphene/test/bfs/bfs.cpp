@@ -15,7 +15,7 @@
 using namespace std;
 
 #define CACHE_PATH "/home/ccy/data_set/twitter7/twitter7_FAM_GRAPH/bin_order.cache"
-#define CACHE_RATIO 0.17
+#define CACHE_RATIO 0
 
 inline bool is_active
 (index_t vert_id,
@@ -91,10 +91,13 @@ int main(int argc, char **argv)
 		static_cache[i] = nullptr;
 	}
 	//fake:除了0，所有的点都只有一个假后继节点，就是自己。
-	double cache_read = wtime();
-	CacheMap *cache_map =
+
+	if(CACHE_RATIO != 0){
+		double cache_read = wtime();
+		CacheMap *cache_map =
             BinReader::read_bin_cache(CACHE_PATH, CACHE_RATIO, vert_count);
-	cout<<"Construct Cache Time:"<<wtime()-cache_read<<" seconds(s)"<<endl;
+		cout<<"Construct Cache Time:"<<wtime()-cache_read<<" seconds(s)"<<endl;
+	}
 	
 
 	/*for(uint32_t i=1;i<vert_count;i++){
@@ -195,8 +198,9 @@ int main(int argc, char **argv)
 						MAX_USELESS,
 						io_limit,
 						&is_active);
-			it_temp->static_cache = cache_map;
-			it_temp->vert_hit_in_cache = new uint32_t[1600000000];
+			it_temp->set_static_cache(cache_map);
+			it_temp->init_cache_hit_list(cache_map->get_cached_edges_count());
+		
 			//每个线程都有一个queue，每个queue第一个vertex_id都是root
 			front_queue_ptr[comp_tid][0] = root;
 			front_count_ptr[comp_tid] = 1;

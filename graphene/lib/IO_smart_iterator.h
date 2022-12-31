@@ -13,10 +13,12 @@ typedef bool (*cb_func)(index_t, sa_t, sa_t*, sa_t *);
 
 class IO_smart_iterator
 {
-	public:
-		CacheMap* static_cache=nullptr;
+	private:
+		CacheMap* static_cache = nullptr;
 		uint32_t* vert_hit_in_cache;
 		uint32_t vert_hit_in_cache_count;
+	public:
+		
 		cache_driver *cd;
 		int fd_csr;
 
@@ -154,6 +156,13 @@ class IO_smart_iterator
 		~IO_smart_iterator();
 
 	public:
+		//====== ccy added=============
+		void set_static_cache(CacheMap* static_cache_ptr);
+		CacheMap* get_static_cache();
+		void init_cache_hit_list(uint32_t max_edges_count);
+		//====== end ==================
+
+
 		void next();
 		int next(int used_buff);
 		void load_kv_sa(sa_t criterion);	
