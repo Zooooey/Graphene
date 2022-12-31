@@ -364,7 +364,6 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 			if(static_cache != nullptr){
 				CacheElem * cache_elem = static_cache->get(i);
 				in_cache = cache_elem != nullptr;
-			}
 			if (in_cache)
 			{
 				for(int cache_i = 0;cache_i < cache_elem->get_out_degree();cache_i++)
@@ -376,6 +375,7 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 					vert_hit_in_cache[vert_hit_in_cache_count++]=cache_elem->get_neighbor_at(cache_i);
 				}
 				continue;
+			}
 			}
 
 			index_t beg = beg_pos_ptr[i - row_ranger_beg];
@@ -468,10 +468,10 @@ void IO_smart_iterator::req_translator_queue()
 					//cout<<"i:"<<i<<endl;
 
 					//这里的逻辑有点复杂，细节很多，但不管怎么说，既然该逻辑认定i需要读取neighbors，那么cache逻辑也一样可以。
+					if(static_cache!=nullptr){
 					bool in_cache = false;
-					if(static_cache->)
 					CacheElem *cache_elem = static_cache->get(i);
-					bool in_cache = cache_elem != nullptr ;
+					in_cache = cache_elem != nullptr ;
 					if (in_cache)
 					{
 						for (int cache_i = 0; cache_i < cache_elem->get_out_degree(); cache_i++)
@@ -484,6 +484,7 @@ void IO_smart_iterator::req_translator_queue()
 						}
 						continue;
 					}
+				}
 
 					index_t beg = beg_pos_ptr[i - row_ranger_beg];
 					index_t end = beg_pos_ptr[i+1 - row_ranger_beg];

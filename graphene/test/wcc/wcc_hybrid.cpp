@@ -275,7 +275,6 @@ int main(int argc, char **argv)
 				front_count_ptr[comp_tid] = 0;
 			}
 		}
-		cout<<"ccy:step1"<<endl;
 		//----------------------
 		//Root is found
 		//-==================================
@@ -286,16 +285,13 @@ int main(int argc, char **argv)
 		double convert_tm=0;
 		index_t prev_front_count = 1;
 		index_t front_count = 0;
-		cout<<"step1-1"<<endl;
 		while(true)
 		//while(false)
 		{
-			cout<<"while true"<<endl;
 			//- Framework gives user block to process
 			//- Figures out what blocks needed next level
 			if((tid & 1) == 0)
 			{
-			cout<<"tid&1"<<endl;
 				it -> io_time = 0;
 				it -> wait_io_time = 0;
 				it -> wait_comp_time = 0;
@@ -307,27 +303,21 @@ int main(int argc, char **argv)
 			double ltm=wtime();
 			if((tid & 1) == 0)
 			{
-			cout<<"tid&1-1"<<endl;
 				it->is_bsp_done = false;
 				convert_tm=wtime();
 				if((prev_front_count * 100.0)/ vert_count > 2.0) {
-					cout<<"start req_translator"<<endl;
 					it->req_translator(level);
-					cout<<"end req_translator"<<endl;
 
 				}
 				else
 				{
-					cout<<"start req_translator_queue"<<endl;
 					it->req_translator_queue();
-					cout<<"end req_translator_queue"<<endl;
 				}
 				convert_tm=wtime()-convert_tm;
 			}
 			else it->is_io_done = false;
 #pragma omp barrier
 
-		cout<<"ccy:step2"<<endl;
 			if((tid & 1) == 0)
 			{
 				while(true)
@@ -404,7 +394,6 @@ int main(int argc, char **argv)
 
 			comm[tid] = front_count;
 #pragma omp barrier
-		cout<<"ccy:step3"<<endl;
 			front_count = 0;
 			for(int i = 0 ;i< NUM_THDS; ++i)
 				front_count += comm[i];
